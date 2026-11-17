@@ -162,6 +162,16 @@ public class UserService {
         activityDAO.log(userId, "PROFILE_UPDATE", existing.getFullName() + " updated their personal profile.", "USER", userId);
     }
 
+    public void updateProfilePicture(int userId, String profilePicture) throws AppException {
+        User existing = getUserById(userId);
+        existing.setProfilePicture(profilePicture);
+        boolean updated = userDAO.updateProfilePicture(userId, profilePicture);
+        if (!updated) {
+            throw new AppException("Failed to update profile picture.");
+        }
+        activityDAO.log(userId, "PROFILE_PICTURE_UPDATE", existing.getFullName() + (profilePicture != null && !profilePicture.isEmpty() ? " updated their profile picture." : " removed their profile picture."), "USER", userId);
+    }
+
     public void deleteUser(int userId, Integer actorUserId) throws AppException {
         User existing = getUserById(userId);
 

@@ -15,6 +15,7 @@ public class User extends BaseEntity {
     protected String password;
     protected Role role;
     protected String status = "ACTIVE"; // ACTIVE or INACTIVE
+    protected String profilePicture; // Optional avatar URL or Base64 data URI
 
     public User() {
         super();
@@ -28,6 +29,18 @@ public class User extends BaseEntity {
         this.password = password;
         this.role = role != null ? role : Role.TEAM_MEMBER;
         this.status = status != null ? status : "ACTIVE";
+    }
+
+    public boolean hasProfilePicture() {
+        return profilePicture != null && !profilePicture.trim().isEmpty();
+    }
+
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
     }
 
     // Role-based capability checks (Demonstrates Polymorphism in subclasses)

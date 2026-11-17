@@ -18,6 +18,8 @@ public interface UserDAO extends GenericDAO<User, Integer> {
 
     boolean updatePassword(int userId, String hashedPassword);
 
+    boolean updateProfilePicture(int userId, String profilePicture);
+
     int countUsers();
 
     int countActiveByRole(Role role);

@@ -88,6 +88,20 @@ public class ProfileServlet extends HttpServlet {
 
                 authService.changePassword(currentUser.getId(), currentPassword, newPassword);
                 session.setAttribute("flash_success", "Password updated successfully.");
+            } else if ("updateProfilePicture".equalsIgnoreCase(action)) {
+                String profilePicture = request.getParameter("profilePicture");
+                if (profilePicture != null && profilePicture.length() > 2_000_000) {
+                    throw new AppException("Profile picture size exceeds maximum limit.");
+                }
+                userService.updateProfilePicture(currentUser.getId(), profilePicture);
+                User updatedUser = userService.getUserById(currentUser.getId());
+                session.setAttribute("currentUser", updatedUser);
+                session.setAttribute("flash_success", "Profile picture updated successfully.");
+            } else if ("removeProfilePicture".equalsIgnoreCase(action)) {
+                userService.updateProfilePicture(currentUser.getId(), null);
+                User updatedUser = userService.getUserById(currentUser.getId());
+                session.setAttribute("currentUser", updatedUser);
+                session.setAttribute("flash_success", "Profile picture removed successfully.");
             }
         } catch (AppException e) {
             session.setAttribute("flash_error", e.getMessage());

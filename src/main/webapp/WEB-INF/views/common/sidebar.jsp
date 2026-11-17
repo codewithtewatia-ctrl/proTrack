@@ -89,9 +89,15 @@
     <!-- User Profile Footer -->
     <% if (user != null) { %>
     <div class="sidebar-user">
-        <div class="user-avatar">
-            <%= user.getFullName() != null && user.getFullName().length() > 0 ? com.protrack.util.ValidationUtil.escapeXml(user.getFullName().substring(0, 1).toUpperCase()) : "U" %>
-        </div>
+        <% if (user.hasProfilePicture()) { %>
+            <img src="<%= com.protrack.util.ValidationUtil.escapeXml(user.getProfilePicture()) %>" 
+                 alt="Avatar" class="rounded-circle object-fit-cover me-2" 
+                 style="width: 38px; height: 38px; border: 2px solid #818cf8;">
+        <% } else { %>
+            <div class="user-avatar">
+                <%= user.getFullName() != null && user.getFullName().length() > 0 ? com.protrack.util.ValidationUtil.escapeXml(user.getFullName().substring(0, 1).toUpperCase()) : "U" %>
+            </div>
+        <% } %>
         <div class="user-info">
             <div class="user-name" title="<%= com.protrack.util.ValidationUtil.escapeXml(user.getFullName()) %>"><%= com.protrack.util.ValidationUtil.escapeXml(user.getFullName()) %></div>
             <div class="user-role"><%= user.getRole().getDisplayName() %></div>

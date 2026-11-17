@@ -33,6 +33,13 @@ public class UserDAOImpl implements UserDAO {
         User user = UserFactory.createUser(id, fullName, email, password, role, status);
         user.setCreatedAt(rs.getTimestamp("created_at"));
         user.setUpdatedAt(rs.getTimestamp("updated_at"));
+
+        try {
+            user.setProfilePicture(rs.getString("profile_picture"));
+        } catch (SQLException ignored) {
+            // Field may not be present in legacy queries
+        }
+
         return user;
     }
 
@@ -192,6 +199,19 @@ public class UserDAOImpl implements UserDAO {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             throw new DatabaseOperationException("Failed to update password for user: " + userId, e);
+        }
+    }
+
+    @Override
+    public boolean updateProfilePicture(int userId, String profilePicture) {
+        String sql = "UPDATE users SET profile_picture = ? WHERE user_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, profilePicture);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to update profile picture for user: " + userId, e);
         }
     }
 

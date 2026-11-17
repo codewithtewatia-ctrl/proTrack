@@ -38,9 +38,15 @@
         <!-- User Profile Dropdown -->
         <div class="dropdown">
             <button class="btn btn-link text-decoration-none p-0 d-flex align-items-center dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px; font-size: 0.9rem;">
-                    <%= navUser.getFullName() != null && !navUser.getFullName().isEmpty() ? com.protrack.util.ValidationUtil.escapeXml(navUser.getFullName().substring(0, 1).toUpperCase()) : "U" %>
-                </div>
+                <% if (navUser != null && navUser.hasProfilePicture()) { %>
+                    <img src="<%= com.protrack.util.ValidationUtil.escapeXml(navUser.getProfilePicture()) %>" 
+                         alt="Avatar" class="rounded-circle object-fit-cover shadow-sm border" 
+                         style="width: 38px; height: 38px; border: 2px solid #818cf8 !important;">
+                <% } else { %>
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px; font-size: 0.9rem;">
+                        <%= navUser != null && navUser.getFullName() != null && !navUser.getFullName().isEmpty() ? com.protrack.util.ValidationUtil.escapeXml(navUser.getFullName().substring(0, 1).toUpperCase()) : "U" %>
+                    </div>
+                <% } %>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-light">
                 <li class="px-3 py-2 border-bottom">
