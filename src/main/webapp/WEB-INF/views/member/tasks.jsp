@@ -65,8 +65,26 @@
             </div>
         </div>
 
+        <!-- View Toggle & Subheader Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small fw-medium">View:</span>
+                <div class="btn-group btn-group-sm view-mode-toggle shadow-sm" role="group">
+                    <button type="button" class="btn btn-outline-custom active" id="btnViewTable" onclick="switchTaskView('table')">
+                        <i class="bi bi-list-ul me-1"></i> List Table
+                    </button>
+                    <button type="button" class="btn btn-outline-custom" id="btnViewKanban" onclick="switchTaskView('kanban')">
+                        <i class="bi bi-kanban me-1"></i> Kanban Board
+                    </button>
+                </div>
+            </div>
+            <div class="text-muted small">
+                Showing <strong class="text-dark"><%= taskList != null ? taskList.size() : 0 %></strong> tasks
+            </div>
+        </div>
+
         <!-- My Tasks Table Card -->
-        <div class="protrack-card">
+        <div class="protrack-card" id="tasksTableViewCard">
             <div class="protrack-card-header">
                 <h5 class="protrack-card-title">
                     <i class="bi bi-check2-square"></i> Tasks Queue (<%= taskList != null ? taskList.size() : 0 %>)
@@ -139,6 +157,9 @@
                 </table>
             </div>
         </div>
+
+        <!-- Kanban Board View Component -->
+        <jsp:include page="../common/kanban-board.jsp" />
 
     </div><!-- /.content-body -->
 

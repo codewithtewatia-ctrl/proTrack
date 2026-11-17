@@ -19,9 +19,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.Date;
 import java.util.Collections;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -190,5 +193,60 @@ public class TaskServletAuthorizationTest {
         taskServlet.doPost(request, response);
 
         verify(session).setAttribute(eq("flash_error"), contains("Invalid date format (expected yyyy-MM-dd)"));
+    }
+
+    @Test
+    @DisplayName("Verify updateStatus via AJAX returns JSON success response")
+    public void testUpdateStatusViaAjaxReturnsJsonSuccess() throws ServletException, IOException, AppException {
+        when(request.getRequestURI()).thenReturn("/protrack/manager/tasks");
+        when(request.getParameter("action")).thenReturn("updateStatus");
+        when(request.getParameter("taskId")).thenReturn("42");
+        when(request.getParameter("status")).thenReturn("IN_PROGRESS");
+        when(request.getHeader("X-Requested-With")).thenReturn("XMLHttpRequest");
+
+        User manager = UserFactory.createUser(5, "Manager", "pm@protrack.com", "hash", Role.PROJECT_MANAGER, "ACTIVE");
+        when(session.getAttribute("currentUser")).thenReturn(manager);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        when(response.getWriter()).thenReturn(printWriter);
+
+        taskServlet.doPost(request, response);
+
+        verify(mockTaskService).updateTaskStatusWithRoleCheck(eq(42), eq(com.protrack.model.TaskStatus.IN_PROGRESS), eq(manager));
+        verify(response).setContentType("application/json");
+        printWriter.flush();
+        String output = stringWriter.toString();
+        assertTrue(output.contains("\"success\":true"), "Response must indicate success in JSON");
+        assertTrue(output.contains("IN_PROGRESS"), "Response must contain updated status");
+    }
+
+    @Test
+    @DisplayName("Verify updateStatus via AJAX on unauthorized access returns 403 JSON error")
+    public void testUpdateStatusViaAjaxUnauthorizedReturns403() throws ServletException, IOException, AppException {
+        when(request.getRequestURI()).thenReturn("/protrack/member/tasks");
+        when(request.getParameter("action")).thenReturn("updateStatus");
+        when(request.getParameter("taskId")).thenReturn("99");
+        when(request.getParameter("status")).thenReturn("COMPLETED");
+        when(request.getHeader("X-Requested-With")).thenReturn("XMLHttpRequest");
+
+        User member = UserFactory.createUser(12, "Member", "dev@protrack.com", "hash", Role.TEAM_MEMBER, "ACTIVE");
+        when(session.getAttribute("currentUser")).thenReturn(member);
+
+        doThrow(new com.protrack.exception.UnauthorizedAccessException("Not your task"))
+                .when(mockTaskService).updateTaskStatusWithRoleCheck(eq(99), any(), eq(member));
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        when(response.getWriter()).thenReturn(printWriter);
+
+        taskServlet.doPost(request, response);
+
+        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        verify(response).setContentType("application/json");
+        printWriter.flush();
+        String output = stringWriter.toString();
+        assertTrue(output.contains("\"success\":false"), "Response must indicate failure in JSON");
+        assertTrue(output.contains("Not your task"), "Response must contain the error message");
     }
 }

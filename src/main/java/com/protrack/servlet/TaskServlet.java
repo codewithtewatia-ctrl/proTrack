@@ -143,6 +143,10 @@ public class TaskServlet extends HttpServlet {
         Integer actorUserId = currentUser.getId();
         Role userRole = currentUser.getRole();
 
+        boolean isAjax = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+                || (request.getHeader("Accept") != null && request.getHeader("Accept").contains("application/json"))
+                || "true".equalsIgnoreCase(request.getParameter("ajax"));
+
         // Redirect target based on role to prevent unauthorized URL redirect
         String redirectTarget = (userRole == Role.TEAM_MEMBER)
                 ? request.getContextPath() + "/member/tasks"
@@ -251,6 +255,15 @@ public class TaskServlet extends HttpServlet {
 
                     // Security: Verifies ownership for TEAM_MEMBER (can only change their own assigned task)
                     taskService.updateTaskStatusWithRoleCheck(taskId, newStatus, currentUser);
+
+                    if (isAjax) {
+                        response.setContentType("application/json");
+                        response.setCharacterEncoding("UTF-8");
+                        response.getWriter().write("{\"success\":true,\"message\":\"Task status updated to "
+                                + newStatus.getLabel() + ".\",\"taskId\":" + taskId + ",\"status\":\"" + newStatus.name() + "\"}");
+                        return;
+                    }
+
                     session.setAttribute("flash_success", "Task status updated to " + newStatus.getLabel() + ".");
                 }
                 case "delete" -> {
@@ -277,14 +290,35 @@ public class TaskServlet extends HttpServlet {
                 default -> session.setAttribute("flash_error", "Unknown action: " + action);
             }
         } catch (com.protrack.exception.UnauthorizedAccessException e) {
+            if (isAjax) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false,\"error\":\"" + ValidationUtil.escapeXml(e.getMessage()) + "\"}");
+                return;
+            }
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             request.setAttribute("errorMessage", e.getMessage());
             request.getRequestDispatcher("/WEB-INF/views/error/403.jsp").forward(request, response);
             return;
         } catch (AppException e) {
+            if (isAjax) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false,\"error\":\"" + ValidationUtil.escapeXml(e.getMessage()) + "\"}");
+                return;
+            }
             session.setAttribute("flash_error", e.getMessage());
         } catch (Exception e) {
             getServletContext().log("Unexpected error in TaskServlet", e);
+            if (isAjax) {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false,\"error\":\"An unexpected system error occurred. Please try again.\"}");
+                return;
+            }
             session.setAttribute("flash_error", "An unexpected system error occurred. Please try again.");
         }
 

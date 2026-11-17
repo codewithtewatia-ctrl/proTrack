@@ -160,6 +160,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // 10. Task View Mode (Table vs Kanban) Restoration
+    const savedTaskView = localStorage.getItem('protrack_task_view');
+    if (savedTaskView === 'kanban') {
+        const kanbanBtn = document.getElementById('btnViewKanban');
+        if (kanbanBtn) {
+            switchTaskView('kanban');
+        }
+    }
 });
 
 /**
@@ -251,3 +260,229 @@ window.initAdminCharts = function(statusData, priorityData) {
         });
     }
 };
+
+/* ==========================================================================
+   Kanban Board View & Drag-and-Drop Controller
+   ========================================================================== */
+
+/**
+ * Switches between Table (List) and Kanban Board view with localStorage persistence.
+ */
+window.switchTaskView = function(viewMode) {
+    const tableView = document.getElementById('tasksTableViewCard');
+    const kanbanView = document.getElementById('kanbanBoardView');
+    const btnTable = document.getElementById('btnViewTable');
+    const btnKanban = document.getElementById('btnViewKanban');
+
+    if (!tableView || !kanbanView) return;
+
+    if (viewMode === 'kanban') {
+        tableView.classList.add('d-none');
+        kanbanView.classList.remove('d-none');
+        if (btnTable) btnTable.classList.remove('active');
+        if (btnKanban) btnKanban.classList.add('active');
+        localStorage.setItem('protrack_task_view', 'kanban');
+    } else {
+        kanbanView.classList.add('d-none');
+        tableView.classList.remove('d-none');
+        if (btnKanban) btnKanban.classList.remove('active');
+        if (btnTable) btnTable.classList.add('active');
+        localStorage.setItem('protrack_task_view', 'table');
+    }
+};
+
+/**
+ * Drag and Drop Handlers for Kanban Cards
+ */
+window.handleKanbanDragStart = function(event) {
+    const card = event.currentTarget;
+    card.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+    event.dataTransfer.setData('source-status', card.getAttribute('data-status'));
+    window.activeKanbanCard = card;
+};
+
+window.handleKanbanDragEnd = function(event) {
+    const card = event.currentTarget;
+    card.classList.remove('is-dragging');
+    document.querySelectorAll('.kanban-column-body').forEach(col => {
+        col.classList.remove('drag-over');
+    });
+    window.activeKanbanCard = null;
+};
+
+window.allowKanbanDrop = function(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const columnBody = event.currentTarget;
+    if (!columnBody.classList.contains('drag-over')) {
+        columnBody.classList.add('drag-over');
+    }
+};
+
+window.handleKanbanDragLeave = function(event) {
+    const columnBody = event.currentTarget;
+    // Check if genuinely leaving the drop zone (not entering child element)
+    if (!columnBody.contains(event.relatedTarget)) {
+        columnBody.classList.remove('drag-over');
+    }
+};
+
+window.handleKanbanDrop = function(event, targetStatus) {
+    event.preventDefault();
+    const columnBody = event.currentTarget;
+    columnBody.classList.remove('drag-over');
+
+    const taskId = event.dataTransfer.getData('text/plain');
+    const sourceStatus = event.dataTransfer.getData('source-status');
+
+    if (!taskId || !targetStatus || sourceStatus === targetStatus) {
+        return;
+    }
+
+    const card = document.querySelector(`.kanban-card[data-id="${taskId}"]`);
+    if (!card) return;
+
+    // Execute status transition via AJAX
+    updateTaskStatusAjax(taskId, targetStatus, card, sourceStatus, columnBody);
+};
+
+/**
+ * Performs asynchronous task status update with CSRF token and updates UI on success
+ */
+window.updateTaskStatusAjax = function(taskId, targetStatus, card, sourceStatus, targetColumnBody) {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    const endpoint = window.location.pathname;
+
+    const formData = new URLSearchParams();
+    formData.append('action', 'updateStatus');
+    formData.append('taskId', taskId);
+    formData.append('status', targetStatus);
+    formData.append('ajax', 'true');
+    if (csrfToken) {
+        formData.append('csrfToken', csrfToken);
+    }
+
+    fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': csrfToken
+        },
+        body: formData.toString()
+    })
+    .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to update task status');
+        }
+        return data;
+    })
+    .then(data => {
+        // 1. Move card to new column
+        const oldColumn = card.closest('.kanban-column-body');
+        card.setAttribute('data-status', targetStatus);
+
+        // Remove empty state placeholder in target column if present
+        const emptyState = targetColumnBody.querySelector('.kanban-empty-state');
+        if (emptyState) emptyState.remove();
+
+        targetColumnBody.appendChild(card);
+
+        // 2. Update card's status badge
+        const statusBadge = card.querySelector('.kanban-status-badge');
+        if (statusBadge) {
+            statusBadge.className = 'badge badge-custom kanban-status-badge ' + getBadgeClassForStatus(targetStatus);
+            statusBadge.innerText = formatStatusLabel(targetStatus);
+        }
+
+        // 3. Update column counter badges
+        refreshKanbanColumnCounters();
+
+        // 4. Check if old column is now empty
+        if (oldColumn && oldColumn.querySelectorAll('.kanban-card').length === 0) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'kanban-empty-state';
+            placeholder.innerHTML = '<i class="bi bi-inbox"></i><span>No tasks in this stage</span>';
+            oldColumn.appendChild(placeholder);
+        }
+
+        // 5. Show success notification
+        showKanbanToast(data.message || `Task moved to ${formatStatusLabel(targetStatus)}`, 'success');
+    })
+    .catch(error => {
+        console.error('Task status update failed:', error);
+        showKanbanToast(error.message || 'Error updating task status', 'danger');
+    });
+};
+
+/**
+ * Quick status update helper for keyboard/dropdown actions on cards
+ */
+window.quickTransitionTaskStatus = function(taskId, newStatus) {
+    const card = document.querySelector(`.kanban-card[data-id="${taskId}"]`);
+    if (!card) return;
+    const sourceStatus = card.getAttribute('data-status');
+    const targetColumn = document.querySelector(`.kanban-column-body[data-status="${newStatus}"]`);
+    if (!targetColumn) return;
+
+    updateTaskStatusAjax(taskId, newStatus, card, sourceStatus, targetColumn);
+};
+
+function refreshKanbanColumnCounters() {
+    document.querySelectorAll('.kanban-column').forEach(col => {
+        const status = col.getAttribute('data-column-status');
+        const count = col.querySelectorAll('.kanban-card').length;
+        const badge = col.querySelector('.kanban-count-badge');
+        if (badge) badge.innerText = count;
+    });
+}
+
+function getBadgeClassForStatus(status) {
+    switch (status) {
+        case 'TODO': return 'bg-secondary';
+        case 'IN_PROGRESS': return 'bg-primary';
+        case 'REVIEW': return 'bg-warning text-dark';
+        case 'COMPLETED': return 'bg-success';
+        default: return 'bg-secondary';
+    }
+}
+
+function formatStatusLabel(status) {
+    switch (status) {
+        case 'TODO': return 'To Do';
+        case 'IN_PROGRESS': return 'In Progress';
+        case 'REVIEW': return 'In Review';
+        case 'COMPLETED': return 'Completed';
+        default: return status;
+    }
+}
+
+/**
+ * Displays floating notification toast
+ */
+function showKanbanToast(message, type) {
+    let container = document.querySelector('.kanban-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'kanban-toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'kanban-toast';
+    const icon = type === 'success' ? 'bi-check-circle-fill text-success' : 'bi-exclamation-triangle-fill text-danger';
+    toast.innerHTML = `<i class="bi ${icon} fs-5"></i><span>${message}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(12px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+

@@ -12,6 +12,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= request.getAttribute("pageTitle") != null ? request.getAttribute("pageTitle") + " | " + appName : appName %></title>
     
+    <!-- CSRF & Application Context Meta Tags -->
+    <% if (session != null) { %>
+    <meta name="csrf-token" content="<%= com.protrack.util.CSRFTokenUtil.getToken(session) %>">
+    <% } %>
+    <meta name="context-path" content="<%= request.getContextPath() %>">
+    
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
