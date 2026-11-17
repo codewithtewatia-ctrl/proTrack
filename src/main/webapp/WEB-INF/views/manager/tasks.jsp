@@ -113,8 +113,45 @@
                     </button>
                 </div>
             </div>
-            <div class="text-muted small">
-                Showing <strong class="text-dark"><%= taskList != null ? taskList.size() : 0 %></strong> tasks
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-outline-custom dropdown-toggle shadow-sm" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download me-1"></i> Export Tasks
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-spreadsheet me-1"></i> CSV Exports</h6></li>
+                        <li>
+                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=overdue&format=csv">
+                                <i class="bi bi-alarm-fill text-danger me-2"></i> Overdue Tasks (CSV)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=tasks&format=csv<%= selectedProject > 0 ? "&projectId=" + selectedProject : "" %>">
+                                <i class="bi bi-filetype-csv text-success me-2"></i> Current Tasks List (CSV)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=projects&format=csv">
+                                <i class="bi bi-folder-check text-primary me-2"></i> Project Milestones (CSV)
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-pdf me-1"></i> Print / PDF Document</h6></li>
+                        <li>
+                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=overdue&format=pdf" target="_blank">
+                                <i class="bi bi-printer-fill text-danger me-2"></i> Overdue Tasks Report (PDF)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=tasks&format=pdf<%= selectedProject > 0 ? "&projectId=" + selectedProject : "" %>" target="_blank">
+                                <i class="bi bi-printer-fill text-primary me-2"></i> Tasks Summary Report (PDF)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="text-muted small">
+                    Showing <strong class="text-dark"><%= taskList != null ? taskList.size() : 0 %></strong> tasks
+                </div>
             </div>
         </div>
 

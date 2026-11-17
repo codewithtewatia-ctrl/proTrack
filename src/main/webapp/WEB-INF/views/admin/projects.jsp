@@ -33,7 +33,7 @@
         <div class="protrack-card mb-4">
             <div class="protrack-card-body p-3">
                 <form action="<%= request.getContextPath() %>/admin/projects" method="GET" class="row g-2 align-items-center">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <div class="input-group">
                             <span class="input-group-text bg-light text-muted"><i class="bi bi-search"></i></span>
                             <input type="text" class="form-control table-search-input" data-target="projectsTable"
@@ -51,13 +51,43 @@
                             <option value="CANCELLED" <%= "CANCELLED".equals(selectedStatus) ? "selected" : "" %>>Cancelled</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <a href="<%= request.getContextPath() %>/admin/projects" class="btn btn-outline-custom w-100">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    <div class="col-md-1">
+                        <a href="<%= request.getContextPath() %>/admin/projects" class="btn btn-outline-custom w-100" title="Reset Filters">
+                            <i class="bi bi-arrow-counterclockwise"></i>
                         </a>
                     </div>
-                    <div class="col-md-2 text-md-end">
-                        <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                    <div class="col-md-4 text-md-end d-flex gap-2 justify-content-end">
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-outline-custom dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Export Reports">
+                                <i class="bi bi-download me-1"></i> Export
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-spreadsheet me-1"></i> CSV Summaries</h6></li>
+                                <li>
+                                    <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=projects&format=csv">
+                                        <i class="bi bi-filetype-csv text-success me-2"></i> Company Milestones (CSV)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=overdue&format=csv">
+                                        <i class="bi bi-alarm-fill text-danger me-2"></i> Company Overdue Tasks (CSV)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=tasks&format=csv">
+                                        <i class="bi bi-list-check text-primary me-2"></i> All Tasks Export (CSV)
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-pdf me-1"></i> Print / PDF Document</h6></li>
+                                <li>
+                                    <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=projects&format=pdf" target="_blank">
+                                        <i class="bi bi-printer-fill text-primary me-2"></i> Milestones PDF Report
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#createProjectModal">
                             <i class="bi bi-folder-plus me-1"></i> New Project
                         </button>
                     </div>

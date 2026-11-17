@@ -143,6 +143,16 @@ public class AuthenticationFilter implements Filter {
             }
         }
 
+        // Report Export endpoints: accessible only to Admins and Project Managers
+        if (uri.startsWith("/export")) {
+            if (role != Role.ADMIN && role != Role.PROJECT_MANAGER) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                request.setAttribute("errorMessage", "Access Denied: Only Project Managers and Administrators can download reports.");
+                request.getRequestDispatcher("/WEB-INF/views/error/403.jsp").forward(request, response);
+                return;
+            }
+        }
+
         // Team Member endpoints: accessible to any authenticated user
         // Shared profile and activity pages: accessible to any authenticated user
 

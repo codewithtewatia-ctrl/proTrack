@@ -38,6 +38,10 @@
                 <i class="bi bi-gear-fill"></i>
                 <span>System Settings</span>
             </a>
+            <a href="<%= cp %>/export?type=projects&format=pdf" target="_blank" class="nav-link-custom">
+                <i class="bi bi-file-earmark-bar-graph-fill"></i>
+                <span>Reports & Exports</span>
+            </a>
         <% } else if (user != null && user.getRole() == Role.PROJECT_MANAGER) { %>
             <!-- Project Manager Navigation -->
             <a href="<%= cp %>/manager/dashboard" class="nav-link-custom <%= "manager-dashboard".equals(activePage) ? "active" : "" %>">
@@ -51,6 +55,10 @@
             <a href="<%= cp %>/manager/tasks" class="nav-link-custom <%= "manager-tasks".equals(activePage) ? "active" : "" %>">
                 <i class="bi bi-check2-square"></i>
                 <span>Task Management</span>
+            </a>
+            <a href="<%= cp %>/export?type=projects&format=pdf" target="_blank" class="nav-link-custom">
+                <i class="bi bi-file-earmark-bar-graph-fill"></i>
+                <span>Reports & Exports</span>
             </a>
         <% } else if (user != null) { %>
             <!-- Team Member Navigation -->

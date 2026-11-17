@@ -77,6 +77,10 @@ public class TaskService {
         return taskDAO.searchTasks(query, projectId, assignedTo, status, priority, managerId);
     }
 
+    public List<Task> getOverdueTasksByManager(int managerId) {
+        return taskDAO.findOverdueTasksByManager(managerId);
+    }
+
     private void validateAssignee(Integer assignedTo, int projectId) throws AppException {
         if (assignedTo != null && assignedTo > 0) {
             User assignee = userDAO.findById(assignedTo)

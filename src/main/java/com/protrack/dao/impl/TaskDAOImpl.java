@@ -461,6 +461,26 @@ public class TaskDAOImpl implements TaskDAO {
     }
 
     @Override
+    public List<Task> findOverdueTasksByManager(int managerId) {
+        List<Task> list = new ArrayList<>();
+        String sql = BASE_SELECT +
+                " WHERE t.status != 'COMPLETED' AND t.due_date < CURRENT_DATE() AND p.manager_id = ? " +
+                " ORDER BY t.due_date ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, managerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRowToTask(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to fetch overdue tasks for manager: " + managerId, e);
+        }
+        return list;
+    }
+
+    @Override
     public List<Task> findTasksDueToday(Integer userId) {
         List<Task> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(BASE_SELECT)

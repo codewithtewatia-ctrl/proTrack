@@ -39,6 +39,8 @@ public interface TaskDAO extends GenericDAO<Task, Integer> {
 
     List<Task> findOverdueTasks(Integer userId);
 
+    List<Task> findOverdueTasksByManager(int managerId);
+
     List<Task> findTasksDueToday(Integer userId);
 
     Map<TaskStatus, Integer> getStatusDistributionByProject(int projectId);

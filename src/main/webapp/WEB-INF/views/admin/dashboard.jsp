@@ -52,9 +52,14 @@
                     <span class="small text-muted">Several assigned tasks have exceeded their target delivery date across active projects.</span>
                 </div>
             </div>
-            <a href="<%= request.getContextPath() %>/admin/projects" class="btn btn-sm btn-outline-warning fw-semibold">
-                Inspect Projects
-            </a>
+            <div class="d-flex gap-2">
+                <a href="<%= request.getContextPath() %>/export?type=overdue&format=csv" class="btn btn-sm btn-outline-danger fw-semibold">
+                    <i class="bi bi-filetype-csv me-1"></i> Export Overdue (CSV)
+                </a>
+                <a href="<%= request.getContextPath() %>/admin/projects" class="btn btn-sm btn-outline-warning fw-semibold">
+                    Inspect Projects
+                </a>
+            </div>
         </div>
         <% } %>
 

@@ -129,9 +129,14 @@
         <!-- Row 2: Projects Overview Cards -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold text-dark m-0"><i class="bi bi-folder-fill text-primary me-2"></i>Managed Projects</h5>
-            <a href="<%= request.getContextPath() %>/manager/projects" class="btn btn-sm btn-outline-custom">
-                View All Projects <i class="bi bi-arrow-right ms-1"></i>
-            </a>
+            <div class="d-flex gap-2">
+                <a href="<%= request.getContextPath() %>/export?type=projects&format=csv" class="btn btn-sm btn-outline-custom" title="Export Project Milestones CSV">
+                    <i class="bi bi-filetype-csv text-success me-1"></i> Export Milestones (CSV)
+                </a>
+                <a href="<%= request.getContextPath() %>/manager/projects" class="btn btn-sm btn-outline-custom">
+                    View All Projects <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
         </div>
 
         <div class="row g-3 mb-4">
@@ -186,9 +191,14 @@
                 <h5 class="protrack-card-title">
                     <i class="bi bi-list-check"></i> Recent Tasks Across Projects
                 </h5>
-                <a href="<%= request.getContextPath() %>/manager/tasks" class="btn btn-sm btn-outline-custom">
-                    Task Workspace <i class="bi bi-arrow-right ms-1"></i>
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="<%= request.getContextPath() %>/export?type=overdue&format=csv" class="btn btn-sm btn-outline-danger" title="Export Overdue Tasks CSV">
+                        <i class="bi bi-alarm-fill me-1"></i> Overdue Tasks (CSV)
+                    </a>
+                    <a href="<%= request.getContextPath() %>/manager/tasks" class="btn btn-sm btn-outline-custom">
+                        Task Workspace <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-modern">
