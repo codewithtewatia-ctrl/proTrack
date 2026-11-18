@@ -47,7 +47,7 @@
 | **Visual Analytics** | Chart.js | Chart.js 4.4.1 (Doughnut & Bar charts) |
 | **Password & Token Security** | BCrypt & SecureRandom | OpenBSD Blowfish password hashing & cryptographic CSRF tokens |
 | **Build & Packaging Tool** | Apache Maven | Maven 3.9+ (Produces standard `protrack.war`) |
-| **Automated Testing** | JUnit 5 & Mockito | 68 automated unit tests with mocked JDBC & services (JUnit Jupiter 5.10.2 + Mockito 5.11.0) |
+| **Automated Testing** | JUnit 5 & Mockito | 78 automated unit tests with mocked JDBC & services (JUnit Jupiter 5.10.2 + Mockito 5.11.0) |
 
 ---
 
@@ -140,10 +140,12 @@ protrack/
 │       │   ├── filter/SecurityRBACAndAuthTest.java # RBAC, matrix URL bypass, CSRF & stale session tests
 │       │   ├── scheduler/OverdueTaskScannerTest.java # Multithreading & ReentrantLock concurrency tests
 │       │   ├── service/RegistrationSecurityTest.java # Role escalation & 8-char password tests
+│       │   ├── service/ReportExportServiceTest.java # CSV generation & RFC-4180 escaping tests
 │       │   ├── service/TaskAuthorizationTest.java  # Task ownership, assignee validation & status update tests
 │       │   ├── service/UserServiceProtectionTest.java # Admin self-protection & last admin safeguard tests
+│       │   ├── servlet/ExportServletTest.java      # Reporting RBAC, CSV/PDF download tests
 │       │   ├── servlet/ProjectServletAuthorizationTest.java # Project ownership & member access tests
-│       │   ├── servlet/TaskServletAuthorizationTest.java    # Cross-project move & manager task scope tests
+│       │   ├── servlet/TaskServletAuthorizationTest.java    # Cross-project move, Kanban AJAX & manager task scope tests
 │       │   ├── servlet/LogoutServletTest.java               # POST-only CSRF-protected logout tests
 │       │   ├── util/LoginAttemptTrackerTest.java   # Rate limiting & brute-force lockout tests
 │       │   ├── util/XSSSanitizationTest.java       # HTML/script injection neutralization tests
@@ -465,13 +467,15 @@ Execute the entire test suite using:
 ./mvnw test
 ```
 
-### Automated Test Suite Overview (68 Tests — 100% Passing):
+### Automated Test Suite Overview (78 Tests — 100% Passing):
 
 | Test Suite Class | Tests | Category | Key Assertions & Scenarios Verified |
 | :--- | :---: | :--- | :--- |
 | **`OverdueTaskScannerTest`** | 5 | Concurrency & Scheduler | • Thread-safe concurrent counter updates under `ReentrantLock`<br>• `ScheduledExecutorService` lifecycle management (start/stop)<br>• Overdue task scan execution via mock DAO<br>• Graceful database failure handling without crashing daemon thread<br>• Snapshot immutability across concurrent readers |
-| **`TaskServletAuthorizationTest`** | 6 | Servlet & Security | • Project Manager blocked from cross-project task move (target project ownership check)<br>• Project Manager blocked from editing tasks in unmanaged projects<br>• Manager `/manager/tasks` scoped to manager's projects at DAO level<br>• Manager searching unowned `projectId` returns empty list<br>• Administrator sees all tasks across all projects<br>• Malformed date strings trigger descriptive format error |
+| **`TaskServletAuthorizationTest`** | 8 | Servlet, Kanban & Security | • Project Manager blocked from cross-project task move (target project ownership check)<br>• Project Manager blocked from editing tasks in unmanaged projects<br>• Manager `/manager/tasks` scoped to manager's projects at DAO level<br>• Manager searching unowned `projectId` returns empty list<br>• Administrator sees all tasks across all projects<br>• Malformed date strings trigger descriptive format error<br>• AJAX Kanban drag-and-drop status update succeeds with valid CSRF token<br>• AJAX Kanban update denied when attempting unauthorized transition |
 | **`ProjectServletAuthorizationTest`** | 6 | Servlet & Ownership | • Project Manager viewing unmanaged project denied with HTTP 403 Forbidden (`403.jsp`)<br>• Project Manager viewing owned project succeeds (`manager/project-detail.jsp`)<br>• Administrator viewing any project workspace succeeds (`admin/project-detail.jsp`)<br>• Team Member viewing unassigned project denied with HTTP 403 Forbidden<br>• Team Member viewing assigned project succeeds and receives filtered list containing only their own tasks (`member/project-detail.jsp`)<br>• Malformed date strings trigger descriptive format error |
+| **`ExportServletTest`** | 5 | Servlet & Export Security | • Unauthenticated access to `/export` redirected to `/login`<br>• Team Member denied access with HTTP 403 Forbidden (Filter & Servlet enforced)<br>• Administrator exports company-wide project milestones CSV with UTF-8 BOM headers<br>• Project Manager export strictly scoped to managed projects and tasks<br>• Print/PDF format dispatching correctly forwards to executive printable report view |
+| **`ReportExportServiceTest`** | 3 | Service & Reporting | • RFC-4180 CSV generation with UTF-8 BOM (`\uFEFF`) for Microsoft Excel & Google Sheets compatibility<br>• Project Milestones CSV formatting with dynamic completion percentages<br>• Overdue tasks CSV formatting with real-time delinquency days calculation<br>• Escaping of double quotes, commas, and linebreaks |
 | **`LogoutServletTest`** | 4 | Servlet & CSRF | • GET /logout while logged in safely redirects to dashboard without invalidating session<br>• GET /logout while unauthenticated returns HTTP 405 Method Not Allowed<br>• POST /logout with valid CSRF token invalidates session and redirects to /login<br>• POST /logout with missing or invalid CSRF token returns HTTP 403 Forbidden |
 | **`LoginAttemptTrackerTest`** | 5 | Security & Rate Limiting | • Brand new email/IP combination is not locked<br>• 1 to 4 failed login attempts do not trigger lockout<br>• Exactly 5 failed attempts locks target key for 5 minutes<br>• Successful login immediately resets failed attempt counter<br>• Lock tracking is strictly isolated per email + IP combination |
 | **`UserServiceProtectionTest`** | 7 | Service & RBAC Defense | • Administrator cannot change their own role away from `ADMIN`<br>• Administrator cannot deactivate their own account status<br>• Cannot demote the last remaining active administrator<br>• Cannot deactivate the last remaining active administrator<br>• Cannot delete the last remaining active administrator<br>• User self-deletion strictly rejected with clear error message<br>• Demoting an administrator succeeds when multiple active administrators exist |
@@ -484,7 +488,7 @@ Execute the entire test suite using:
 
 ```
 [INFO] Results:
-[INFO] Tests run: 68, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 78, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 
@@ -512,6 +516,10 @@ Execute the entire test suite using:
 - [x] **Date Format Validation:** Malformed date strings trigger `"Invalid date format (expected yyyy-MM-dd)"`.
 - [x] **SameSite Cookie Configuration:** Session cookies protected with `SameSite=Lax` via Servlet 6 attribute declaration in `web.xml`.
 - [x] **Background Task Daemon & Concurrency:** Periodic overdue task monitor runs via `ScheduledExecutorService` with shared metrics guarded by `ReentrantLock` and visible on the Admin Dashboard.
+- [x] **Reporting & Data Export RBAC:** `ExportServlet` and `AuthenticationFilter` enforce that only Project Managers and Administrators can download CSV summaries or view printable reports; Team Members receive HTTP 403 Forbidden.
+- [x] **RFC-4180 CSV & UTF-8 BOM Compatibility:** Exported CSV files include the UTF-8 Byte Order Mark (`\uFEFF`) for Microsoft Excel and Apple Numbers, with automatic escaping of quotes, commas, and linebreaks.
+- [x] **Interactive Kanban Board AJAX Transitions:** Task status drag-and-drop actions perform asynchronous CSRF-validated status updates with strict assignee and manager permission checks.
+- [x] **In-App Profile Picture Security:** Profile picture upload enforces image MIME types, 2MB size ceiling, live modal preview, and instant visual synchronization across navigation bars.
 
 ---
 
