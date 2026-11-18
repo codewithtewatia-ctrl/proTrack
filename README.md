@@ -248,11 +248,14 @@ erDiagram
 | **Edit / Delete Tasks** | :white_check_mark: Yes | :white_check_mark: Yes (Managed projects only) | :x: No (Blocked in Filter & Servlet) |
 | **View Assigned Tasks** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes |
 | **Update Task Status (TODO &rarr; COMPLETED)** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes (**Own assigned tasks only** - ownership verified) |
+| **Interactive Kanban Board & Drag-and-Drop** | :white_check_mark: Yes | :white_check_mark: Yes (Managed projects) | :white_check_mark: Yes (**Own assigned tasks only**) |
+| **Reporting & CSV / PDF Export (`/export`)** | :white_check_mark: Yes (Company-wide milestones & overdue tasks) | :white_check_mark: Yes (Managed projects & overdue tasks only) | :x: No (403 Forbidden - Filter & Servlet enforced) |
 | **Self-Registration Role Assignment** | N/A (Admin only) | :x: Prevented | :white_check_mark: Yes (Forced strictly to `TEAM_MEMBER`) |
+| **Custom Profile Picture (Upload / Change / Delete)** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes (Clickable avatar modal, max 2MB) |
 | **Update Personal Profile & Password** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes (Minimum 8 chars) |
 | **View Audit Trail Activity Feed** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes |
 
-> **Task Ownership Enforcement:** Even though `TaskServlet` handles status updates, backend business logic (`TaskService.updateTaskStatusWithRoleCheck`) cryptographically checks if the logged-in user is an Admin, the Project Manager of the project, or the exact `assignedTo` user. Team members cannot tamper with or update tasks belonging to other team members.
+> **Task Ownership & Reporting Enforcement:** Even though `TaskServlet` handles status updates, backend business logic (`TaskService.updateTaskStatusWithRoleCheck`) cryptographically checks if the logged-in user is an Admin, the Project Manager of the project, or the exact `assignedTo` user. Team members cannot tamper with or update tasks belonging to other team members. Similarly, `ExportServlet` and `AuthenticationFilter` strictly restrict access so only Admins and Project Managers can export CSV milestone summaries and overdue audit reports (`403 Forbidden` for Team Members).
 
 ---
 
@@ -362,6 +365,9 @@ erDiagram
 3. **Comprehensive Audit Logging:** Every create, update, delete, status transition, and login action is recorded into the `activity_logs` table.
 4. **Interactive Dashboard Charts:** Chart.js integration plots project status doughnuts and task priority bar charts from live database counts.
 5. **Quick-Fill Demo Credentials:** One-click demo chips on the login screen automatically populate credentials for rapid viva evaluation.
+6. **Reporting & Data Export (CSV & Print/PDF):** Admins and Project Managers can export RFC-4180 compliant CSV summaries of project milestones and overdue tasks with UTF-8 BOM encoding for Excel, alongside an executive print/PDF report view with KPI summary cards.
+7. **Interactive Drag-and-Drop Kanban Board:** 4-column visual board (`TODO`, `IN_PROGRESS`, `REVIEW`, `COMPLETED`) with HTML5 drag events, persistent view mode toggle, and asynchronous CSRF-protected status updates.
+8. **In-App Profile Picture Customization:** In-app photo upload (JPG/PNG/WEBP up to 2MB) or image URL with interactive modal, live preview, deletion support, and immediate visual reflection across navigation bars.
 
 ---
 
