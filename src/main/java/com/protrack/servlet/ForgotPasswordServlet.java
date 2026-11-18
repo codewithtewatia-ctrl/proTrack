@@ -70,9 +70,10 @@ public class ForgotPasswordServlet extends HttpServlet {
                 OtpService.SendOtpResponse otpResp = otpService.sendOtp(identifier, channel);
 
                 if (isAjax) {
+                    // Do not leak the OTP code to client JSON response (must be delivered via email/contact only)
                     sendJsonResponse(response, HttpServletResponse.SC_OK, true,
                             otpResp.message(), otpResp.channel(), otpResp.maskedTarget(),
-                            otpResp.otpCode(), otpResp.expiryMinutes(), otpResp.email());
+                            null, otpResp.expiryMinutes(), otpResp.email());
                 } else {
                     if (session != null) session.setAttribute("flash_success", otpResp.message());
                     request.setAttribute("step", "verify");

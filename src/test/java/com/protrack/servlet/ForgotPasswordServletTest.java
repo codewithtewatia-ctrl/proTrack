@@ -21,6 +21,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -84,8 +85,10 @@ public class ForgotPasswordServletTest {
         verify(response).setContentType("application/json; charset=UTF-8");
         String output = responseWriter.toString();
         assertTrue(output.contains("\"success\":true"));
-        assertTrue(output.contains("\"otpCode\":\"482915\""));
+        assertTrue(output.contains("\"maskedTarget\":\"s***h@protrack.com\""));
         assertTrue(output.contains("\"channel\":\"MAIL\""));
+        // Ensure OTP code is NOT leaked to browser JSON response
+        assertFalse(output.contains("\"otpCode\""));
     }
 
     @Test

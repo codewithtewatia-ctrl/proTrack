@@ -26,6 +26,7 @@ public class OtpService {
     private final UserDAO userDAO;
     private final OtpDAO otpDAO;
     private final ActivityDAO activityDAO;
+    private final EmailService emailService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public static final int OTP_EXPIRY_MINUTES = 10;
@@ -35,12 +36,18 @@ public class OtpService {
         this.userDAO = new UserDAOImpl();
         this.otpDAO = new OtpDAOImpl();
         this.activityDAO = new ActivityDAOImpl();
+        this.emailService = new EmailService();
     }
 
     public OtpService(UserDAO userDAO, OtpDAO otpDAO, ActivityDAO activityDAO) {
+        this(userDAO, otpDAO, activityDAO, new EmailService());
+    }
+
+    public OtpService(UserDAO userDAO, OtpDAO otpDAO, ActivityDAO activityDAO, EmailService emailService) {
         this.userDAO = userDAO;
         this.otpDAO = otpDAO;
         this.activityDAO = activityDAO;
+        this.emailService = emailService != null ? emailService : new EmailService();
     }
 
     /**
@@ -128,9 +135,13 @@ public class OtpService {
 
         otpDAO.save(otp);
 
-        // Simulated Dispatch Logging for demonstration & testing
-        System.out.printf("[OtpService] DISPATCH %s OTP -> %s (%s) [Code: %s, Expires in: %dm]%n",
-                ch, target, maskedTarget, otpCode, OTP_EXPIRY_MINUTES);
+        boolean emailSent = false;
+        if (PasswordResetOtp.CHANNEL_MAIL.equals(ch)) {
+            emailSent = emailService.sendOtpEmail(user.getEmail(), user.getFullName(), otpCode, OTP_EXPIRY_MINUTES);
+        }
+
+        System.out.printf("[OtpService] DISPATCH %s OTP -> %s (%s) [Code: %s, EmailSent: %b, Expires in: %dm]%n",
+                ch, target, maskedTarget, otpCode, emailSent, OTP_EXPIRY_MINUTES);
 
         activityDAO.log(user.getId(), "OTP_REQUEST",
                 "Requested " + ch + " OTP for password reset.", "AUTH", user.getId());

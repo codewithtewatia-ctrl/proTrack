@@ -616,13 +616,9 @@ window.handleSendOtp = async function() {
             throw new Error(data.error || 'Failed to dispatch verification code. Please check your account details.');
         }
 
-        // Store OTP & update UI
-        window.currentOtpCode = data.otpCode || '';
+        // Update target badge
         const maskedEl = document.getElementById('otpMaskedTarget');
         if (maskedEl) maskedEl.innerText = data.maskedTarget || identifier;
-
-        const demoCodeText = document.getElementById('demoOtpCodeText');
-        if (demoCodeText) demoCodeText.innerText = data.otpCode || '------';
 
         // Switch to Step 2
         document.getElementById('forgotStep1').classList.add('d-none');
@@ -724,15 +720,6 @@ window.handleVerifyAndReset = async function() {
         if (btn) btn.disabled = false;
         if (spinner) spinner.classList.add('d-none');
         if (icon) icon.classList.remove('d-none');
-    }
-};
-
-window.autoFillDemoOtp = function() {
-    const input = document.getElementById('inputOtpCode');
-    if (input && window.currentOtpCode) {
-        input.value = window.currentOtpCode;
-        input.classList.add('is-valid');
-        setTimeout(() => input.classList.remove('is-valid'), 1500);
     }
 };
 

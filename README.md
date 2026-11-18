@@ -468,12 +468,13 @@ Execute the entire test suite using:
 ./mvnw test
 ```
 
-### Automated Test Suite Overview (104 Tests — 100% Passing):
+### Automated Test Suite Overview (107 Tests — 100% Passing):
 
 | Test Suite Class | Tests | Category | Key Assertions & Scenarios Verified |
 | :--- | :---: | :--- | :--- |
+| **`EmailServiceTest`** | 3 | Outbound Mail & SMTP Gateway | • Safe fallback when SMTP credentials are unconfigured without network exceptions<br>• Correct detection of configured SMTP host, port, username, and authentication flags<br>• Default property loading from `mail.properties` |
 | **`OtpServiceTest`** | 10 | Authentication & Identity Recovery | • Mail OTP generation with cryptographically secure 6-digit code and masked email (`s***h@protrack.com`)<br>• Contact OTP generation with registered mobile number formatting and privacy masking (`+1 •••-•••-2834`)<br>• Contact OTP validation rejecting users with missing phone numbers<br>• Invalidation of previous unexpired OTPs upon new request<br>• User lookup rejection for non-existent or deactivated accounts<br>• Successful password reset verifying OTP, updating BCrypt hash, and consuming single-use OTP<br>• Incorrect OTP code increments failed attempt counter and blocks after 5 attempts<br>• Expired OTP code (>10 minutes) strictly rejected<br>• Password mismatch and short password (<8 chars) validation<br>• Comprehensive audit trail logging for OTP generation and recovery events |
-| **`ForgotPasswordServletTest`** | 4 | Servlet & Self-Service Reset | • GET `/forgot-password` forwards to self-service recovery view<br>• POST `action=sendOtp` via AJAX returns JSON payload with masked target and OTP code<br>• POST `action=verifyAndReset` with valid CSRF token updates credentials and returns JSON success<br>• POST `action=verifyAndReset` without CSRF token rejected with HTTP 400 Bad Request |
+| **`ForgotPasswordServletTest`** | 4 | Servlet & Self-Service Reset | • GET `/forgot-password` forwards to self-service recovery view<br>• POST `action=sendOtp` via AJAX returns JSON payload with masked target and channel while strictly preventing OTP code leakage to the client browser<br>• POST `action=verifyAndReset` with valid CSRF token updates credentials and returns JSON success<br>• POST `action=verifyAndReset` without CSRF token rejected with HTTP 400 Bad Request |
 | **`TaskTimeTrackingTest`** | 10 | Productivity & Time Tracking | • Task time progress percentage calculation (0%, 50%, >100%)<br>• Over-estimate detection and overtime hours calculation<br>• Remaining hours calculation before deadline<br>• Dynamic progress bar styling (`bg-primary`, `bg-warning` >= 85%, `bg-danger` overtime)<br>• Project aggregate estimated and logged hours calculation<br>• Team Member allowed to log time on assigned tasks<br>• Team Member blocked with `UnauthorizedAccessException` on unassigned tasks<br>• Project Manager allowed to log time on managed project tasks<br>• Project Manager blocked on other managers' projects<br>• Input validation rejecting negative or excessive (>24h) daily hours |
 | **`OverdueTaskScannerTest`** | 5 | Concurrency & Scheduler | • Thread-safe concurrent counter updates under `ReentrantLock`<br>• `ScheduledExecutorService` lifecycle management (start/stop)<br>• Overdue task scan execution via mock DAO<br>• Graceful database failure handling without crashing daemon thread<br>• Snapshot immutability across concurrent readers |
 | **`TaskServletAuthorizationTest`** | 10 | Servlet, Kanban & Security | • Project Manager blocked from cross-project task move (target project ownership check)<br>• Project Manager blocked from editing tasks in unmanaged projects<br>• Manager `/manager/tasks` scoped to manager's projects at DAO level<br>• Manager searching unowned `projectId` returns empty list<br>• Administrator sees all tasks across all projects<br>• Malformed date strings trigger descriptive format error<br>• AJAX Kanban drag-and-drop status update succeeds with valid CSRF token<br>• AJAX Kanban update denied when attempting unauthorized transition<br>• Standard form POST `logTime` records hours and redirects with flash message<br>• Asynchronous AJAX `logTime` returns JSON success response |
@@ -492,7 +493,7 @@ Execute the entire test suite using:
 
 ```
 [INFO] Results:
-[INFO] Tests run: 90, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 107, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 

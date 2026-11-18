@@ -91,17 +91,9 @@
                         <span class="badge bg-primary" id="otpTimerBadge">10:00</span>
                     </div>
 
-                    <!-- Simulated Viva/Demo Gateway Banner -->
-                    <div class="alert alert-warning py-2 px-3 small border mb-3" id="demoOtpBox" style="background-color: #fffbeb;">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
-                                <strong>Simulated Gateway Dispatch:</strong>
-                                <span class="text-secondary ms-1">Code: </span>
-                                <span class="badge bg-dark fs-6 font-monospace" id="demoOtpCodeText">------</span>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small fw-semibold" onclick="autoFillDemoOtp()">Auto-Fill</button>
-                        </div>
+                    <!-- Dispatch Instruction -->
+                    <div class="text-muted small mb-3">
+                        <i class="bi bi-envelope-check me-1 text-primary"></i> Please check your inbox (and spam/junk folder) for your 6-digit verification code.
                     </div>
 
                     <!-- 6-digit OTP code input -->
