@@ -38,7 +38,7 @@
                 <i class="bi bi-gear-fill"></i>
                 <span>System Settings</span>
             </a>
-            <a href="<%= cp %>/export?type=projects&format=pdf" target="_blank" class="nav-link-custom">
+            <a href="<%= cp %>/export?type=projects&format=pdf" class="nav-link-custom <%= "reports-exports".equals(activePage) ? "active" : "" %>">
                 <i class="bi bi-file-earmark-bar-graph-fill"></i>
                 <span>Reports & Exports</span>
             </a>
@@ -56,7 +56,7 @@
                 <i class="bi bi-check2-square"></i>
                 <span>Task Management</span>
             </a>
-            <a href="<%= cp %>/export?type=projects&format=pdf" target="_blank" class="nav-link-custom">
+            <a href="<%= cp %>/export?type=projects&format=pdf" class="nav-link-custom <%= "reports-exports".equals(activePage) ? "active" : "" %>">
                 <i class="bi bi-file-earmark-bar-graph-fill"></i>
                 <span>Reports & Exports</span>
             </a>

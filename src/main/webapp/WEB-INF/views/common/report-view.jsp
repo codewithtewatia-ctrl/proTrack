@@ -141,6 +141,9 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.history.back()">
                     <i class="bi bi-arrow-left me-1"></i> Return
                 </button>
+                <a href="<%= request.getContextPath() %>/" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                </a>
                 <a href="<%= request.getContextPath() %>/export?type=<%= reportType %>&format=csv" class="btn btn-sm btn-outline-success">
                     <i class="bi bi-filetype-csv me-1"></i> Download CSV
                 </a>

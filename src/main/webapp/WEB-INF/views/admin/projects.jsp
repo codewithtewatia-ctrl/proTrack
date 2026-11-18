@@ -81,7 +81,7 @@
                                 <li><hr class="dropdown-divider"></li>
                                 <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-pdf me-1"></i> Print / PDF Document</h6></li>
                                 <li>
-                                    <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=projects&format=pdf" target="_blank">
+                                    <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=projects&format=pdf">
                                         <i class="bi bi-printer-fill text-primary me-2"></i> Milestones PDF Report
                                     </a>
                                 </li>
