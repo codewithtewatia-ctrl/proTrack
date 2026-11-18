@@ -195,8 +195,18 @@ public class TaskServlet extends HttpServlet {
                     TaskPriority priority = TaskPriority.fromString(priorityStr);
                     TaskStatus status = TaskStatus.fromString(statusStr);
 
+                    Double estimatedHours = null;
+                    String estStr = request.getParameter("estimatedHours");
+                    if (estStr != null && !estStr.trim().isEmpty()) {
+                        try {
+                            estimatedHours = Double.parseDouble(estStr.trim());
+                        } catch (NumberFormatException e) {
+                            throw new AppException("Invalid format for estimated hours (numeric value required).");
+                        }
+                    }
+
                     Task created = taskService.createTask(title, description, projectId,
-                            assignedTo > 0 ? assignedTo : null, priority, status, startDate, dueDate, actorUserId);
+                            assignedTo > 0 ? assignedTo : null, priority, status, startDate, dueDate, estimatedHours, actorUserId);
                     session.setAttribute("flash_success", "Task \"" + created.getTaskTitle() + "\" created successfully.");
                 }
                 case "update" -> {
@@ -244,9 +254,50 @@ public class TaskServlet extends HttpServlet {
                     TaskPriority priority = TaskPriority.fromString(priorityStr);
                     TaskStatus status = TaskStatus.fromString(statusStr);
 
+                    Double estimatedHours = null;
+                    String estStr = request.getParameter("estimatedHours");
+                    if (estStr != null && !estStr.trim().isEmpty()) {
+                        try {
+                            estimatedHours = Double.parseDouble(estStr.trim());
+                        } catch (NumberFormatException e) {
+                            throw new AppException("Invalid format for estimated hours (numeric value required).");
+                        }
+                    }
+
                     taskService.updateTask(taskId, title, description, projectId,
-                            assignedTo > 0 ? assignedTo : null, priority, status, startDate, dueDate, actorUserId);
+                            assignedTo > 0 ? assignedTo : null, priority, status, startDate, dueDate, estimatedHours, actorUserId);
                     session.setAttribute("flash_success", "Task details updated successfully.");
+                }
+                case "logTime" -> {
+                    int taskId = ValidationUtil.parsePositiveInt(request.getParameter("taskId"), 0);
+                    String hoursStr = request.getParameter("hours");
+                    if (hoursStr == null || hoursStr.trim().isEmpty()) {
+                        throw new AppException("Hours logged is required.");
+                    }
+                    double hours;
+                    try {
+                        hours = Double.parseDouble(hoursStr.trim());
+                    } catch (NumberFormatException e) {
+                        throw new AppException("Invalid hours format (numeric value required).");
+                    }
+                    String dateParam = request.getParameter("logDate");
+                    Date logDate = DateUtil.parseSqlDate(dateParam);
+                    if (dateParam != null && !dateParam.trim().isEmpty() && logDate == null) {
+                        throw new AppException("Invalid log date format (expected yyyy-MM-dd).");
+                    }
+                    String desc = request.getParameter("description");
+
+                    taskService.logTimeWithRoleCheck(taskId, hours, logDate, desc, currentUser);
+
+                    if (isAjax) {
+                        response.setContentType("application/json");
+                        response.setCharacterEncoding("UTF-8");
+                        response.getWriter().write("{\"success\":true,\"message\":\"Successfully logged "
+                                + String.format("%.2f", hours) + " hours.\",\"taskId\":" + taskId + "}");
+                        return;
+                    }
+
+                    session.setAttribute("flash_success", "Successfully logged " + String.format("%.2f", hours) + " hours.");
                 }
                 case "updateStatus" -> {
                     int taskId = ValidationUtil.parsePositiveInt(request.getParameter("taskId"), 0);

@@ -5,6 +5,7 @@ import com.protrack.exception.DatabaseOperationException;
 import com.protrack.model.Task;
 import com.protrack.model.TaskPriority;
 import com.protrack.model.TaskStatus;
+import com.protrack.model.TaskTimeLog;
 import com.protrack.util.DBConnection;
 
 import java.sql.Connection;
@@ -66,6 +67,11 @@ public class TaskDAOImpl implements TaskDAO {
         task.setAssignedToName(rs.getString("assigned_to_name"));
         task.setAssignedToEmail(rs.getString("assigned_to_email"));
         task.setCreatedByName(rs.getString("created_by_name"));
+
+        try {
+            task.setEstimatedHours(rs.getDouble("estimated_hours"));
+            task.setLoggedHours(rs.getDouble("logged_hours"));
+        } catch (SQLException ignored) {}
 
         return task;
     }
@@ -237,8 +243,8 @@ public class TaskDAOImpl implements TaskDAO {
 
     @Override
     public Task save(Task task) {
-        String sql = "INSERT INTO tasks (task_title, description, project_id, assigned_to, priority, status, start_date, due_date, created_by) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO tasks (task_title, description, project_id, assigned_to, priority, status, start_date, due_date, created_by, estimated_hours, logged_hours) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, task.getTaskTitle());
@@ -262,6 +268,9 @@ public class TaskDAOImpl implements TaskDAO {
                 ps.setNull(9, Types.INTEGER);
             }
 
+            ps.setDouble(10, task.getEstimatedHours());
+            ps.setDouble(11, task.getLoggedHours());
+
             int affected = ps.executeUpdate();
             if (affected > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -279,7 +288,7 @@ public class TaskDAOImpl implements TaskDAO {
     @Override
     public boolean update(Task task) {
         String sql = "UPDATE tasks SET task_title = ?, description = ?, project_id = ?, assigned_to = ?, " +
-                     "priority = ?, status = ?, start_date = ?, due_date = ? WHERE task_id = ?";
+                     "priority = ?, status = ?, start_date = ?, due_date = ?, estimated_hours = ? WHERE task_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, task.getTaskTitle());
@@ -296,7 +305,8 @@ public class TaskDAOImpl implements TaskDAO {
             ps.setString(6, task.getStatus() != null ? task.getStatus().name() : TaskStatus.TODO.name());
             ps.setDate(7, task.getStartDate());
             ps.setDate(8, task.getDueDate());
-            ps.setInt(9, task.getId());
+            ps.setDouble(9, task.getEstimatedHours());
+            ps.setInt(10, task.getId());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -546,5 +556,138 @@ public class TaskDAOImpl implements TaskDAO {
             throw new DatabaseOperationException("Failed to get priority distribution", e);
         }
         return map;
+    }
+
+    @Override
+    public boolean logTime(int taskId, int userId, double hours, java.sql.Date logDate, String description) {
+        String insertSql = "INSERT INTO task_time_logs (task_id, user_id, hours_logged, log_date, description) VALUES (?, ?, ?, ?, ?)";
+        String updateTaskSql = "UPDATE tasks SET logged_hours = (SELECT COALESCE(SUM(hours_logged), 0) FROM task_time_logs WHERE task_id = ?) WHERE task_id = ?";
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                try (PreparedStatement psInsert = conn.prepareStatement(insertSql)) {
+                    psInsert.setInt(1, taskId);
+                    psInsert.setInt(2, userId);
+                    psInsert.setDouble(3, hours);
+                    psInsert.setDate(4, logDate);
+                    psInsert.setString(5, description);
+                    psInsert.executeUpdate();
+                }
+                try (PreparedStatement psUpdate = conn.prepareStatement(updateTaskSql)) {
+                    psUpdate.setInt(1, taskId);
+                    psUpdate.setInt(2, taskId);
+                    psUpdate.executeUpdate();
+                }
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to log time for task: " + taskId, e);
+        }
+    }
+
+    @Override
+    public List<TaskTimeLog> findTimeLogsByTaskId(int taskId) {
+        List<TaskTimeLog> logs = new ArrayList<>();
+        String sql = "SELECT l.*, u.full_name AS user_name, u.email AS user_email, t.task_title " +
+                     "FROM task_time_logs l " +
+                     "JOIN users u ON l.user_id = u.user_id " +
+                     "JOIN tasks t ON l.task_id = t.task_id " +
+                     "WHERE l.task_id = ? ORDER BY l.log_date DESC, l.created_at DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    TaskTimeLog log = new TaskTimeLog();
+                    log.setId(rs.getInt("log_id"));
+                    log.setTaskId(rs.getInt("task_id"));
+                    log.setUserId(rs.getInt("user_id"));
+                    log.setHoursLogged(rs.getDouble("hours_logged"));
+                    log.setLogDate(rs.getDate("log_date"));
+                    log.setDescription(rs.getString("description"));
+                    log.setCreatedAt(rs.getTimestamp("created_at"));
+                    log.setUserName(rs.getString("user_name"));
+                    log.setUserEmail(rs.getString("user_email"));
+                    log.setTaskTitle(rs.getString("task_title"));
+                    logs.add(log);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to fetch time logs for task: " + taskId, e);
+        }
+        return logs;
+    }
+
+    @Override
+    public List<TaskTimeLog> findTimeLogsByProjectId(int projectId) {
+        List<TaskTimeLog> logs = new ArrayList<>();
+        String sql = "SELECT l.*, u.full_name AS user_name, u.email AS user_email, t.task_title " +
+                     "FROM task_time_logs l " +
+                     "JOIN users u ON l.user_id = u.user_id " +
+                     "JOIN tasks t ON l.task_id = t.task_id " +
+                     "WHERE t.project_id = ? ORDER BY l.log_date DESC, l.created_at DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, projectId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    TaskTimeLog log = new TaskTimeLog();
+                    log.setId(rs.getInt("log_id"));
+                    log.setTaskId(rs.getInt("task_id"));
+                    log.setUserId(rs.getInt("user_id"));
+                    log.setHoursLogged(rs.getDouble("hours_logged"));
+                    log.setLogDate(rs.getDate("log_date"));
+                    log.setDescription(rs.getString("description"));
+                    log.setCreatedAt(rs.getTimestamp("created_at"));
+                    log.setUserName(rs.getString("user_name"));
+                    log.setUserEmail(rs.getString("user_email"));
+                    log.setTaskTitle(rs.getString("task_title"));
+                    logs.add(log);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to fetch time logs for project: " + projectId, e);
+        }
+        return logs;
+    }
+
+    @Override
+    public double getTotalLoggedHoursForProject(int projectId) {
+        String sql = "SELECT COALESCE(SUM(logged_hours), 0) FROM tasks WHERE project_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, projectId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble(1);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to calculate total logged hours for project: " + projectId, e);
+        }
+        return 0.0;
+    }
+
+    @Override
+    public double getTotalEstimatedHoursForProject(int projectId) {
+        String sql = "SELECT COALESCE(SUM(estimated_hours), 0) FROM tasks WHERE project_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, projectId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble(1);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to calculate total estimated hours for project: " + projectId, e);
+        }
+        return 0.0;
     }
 }

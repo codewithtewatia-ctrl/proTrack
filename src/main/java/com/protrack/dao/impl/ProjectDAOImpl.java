@@ -46,13 +46,20 @@ public class ProjectDAOImpl implements ProjectDAO {
             p.setPendingTasks(p.getTotalTasks() - p.getCompletedTasks());
         } catch (SQLException ignored) {}
 
+        try {
+            p.setTotalEstimatedHours(rs.getDouble("total_estimated_hours"));
+            p.setTotalLoggedHours(rs.getDouble("total_logged_hours"));
+        } catch (SQLException ignored) {}
+
         return p;
     }
 
     private static final String BASE_SELECT =
             "SELECT p.*, u.full_name AS manager_name, u.email AS manager_email, " +
             "  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.project_id) AS total_tasks, " +
-            "  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.project_id AND t.status = 'COMPLETED') AS completed_tasks " +
+            "  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.project_id AND t.status = 'COMPLETED') AS completed_tasks, " +
+            "  (SELECT COALESCE(SUM(t.estimated_hours), 0) FROM tasks t WHERE t.project_id = p.project_id) AS total_estimated_hours, " +
+            "  (SELECT COALESCE(SUM(t.logged_hours), 0) FROM tasks t WHERE t.project_id = p.project_id) AS total_logged_hours " +
             "FROM projects p " +
             "JOIN users u ON p.manager_id = u.user_id ";
 

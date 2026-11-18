@@ -59,12 +59,12 @@
                 <hr class="my-4">
 
                 <div class="row g-3 text-secondary small">
-                    <div class="col-sm-6 col-lg-4">
+                    <div class="col-sm-6 col-lg-3">
                         <div class="text-muted mb-1"><i class="bi bi-calendar3 text-primary me-1"></i> Timeline</div>
                         <span class="fw-semibold text-dark"><%= DateUtil.formatDisplayDate(project.getStartDate()) %></span>
                         <span class="text-muted">to <%= DateUtil.formatDisplayDate(project.getEndDate()) %></span>
                     </div>
-                    <div class="col-sm-6 col-lg-4">
+                    <div class="col-sm-6 col-lg-3">
                         <div class="text-muted mb-1"><i class="bi bi-list-check text-primary me-1"></i> Completion Rate</div>
                         <div class="d-flex align-items-center gap-2 mt-1">
                             <div class="progress progress-custom flex-grow-1" style="height: 10px;">
@@ -74,7 +74,22 @@
                         </div>
                         <div class="text-muted"><%= project.getCompletedTasks() %> of <%= project.getTotalTasks() %> tasks completed</div>
                     </div>
-                    <div class="col-sm-6 col-lg-4">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="text-muted mb-1"><i class="bi bi-clock-history text-primary me-1"></i> Time Tracking</div>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <div class="progress flex-grow-1" style="height: 10px; background-color: #e9ecef; border-radius: 4px;">
+                                <div class="progress-bar <%= project.getTimeProgressBarClass() %>" style="width: <%= project.getDisplayTimeProgressPercentage() %>%;"></div>
+                            </div>
+                            <span class="fw-bold text-dark"><%= project.getTimeProgressPercentage() %>%</span>
+                        </div>
+                        <div class="text-muted">
+                            <strong><%= String.format("%.1f", project.getTotalLoggedHours()) %>h</strong> / <%= String.format("%.1f", project.getTotalEstimatedHours()) %>h
+                            <% if (project.isOverEstimate()) { %>
+                                <span class="badge bg-danger ms-1">+<%= String.format("%.1f", project.getOvertimeHours()) %>h Over</span>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
                         <div class="text-muted mb-1"><i class="bi bi-people text-primary me-1"></i> Assigned Team</div>
                         <span class="fw-semibold text-dark fs-6"><%= members != null ? members.size() : 0 %> members assigned</span>
                     </div>
@@ -103,6 +118,7 @@
                                     <th>Priority</th>
                                     <th>Status</th>
                                     <th>Due Date</th>
+                                    <th style="min-width: 140px;">Time Track</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -134,11 +150,30 @@
                                                 <span class="badge bg-warning text-dark small mt-1">Due Today</span>
                                             <% } %>
                                         </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <div class="progress flex-grow-1" style="height: 6px; background-color: #e9ecef; border-radius: 3px;">
+                                                    <div class="progress-bar <%= t.getTimeProgressBarClass() %>" role="progressbar"
+                                                         style="width: <%= t.getDisplayProgressPercentage() %>%;"></div>
+                                                </div>
+                                                <span class="small fw-bold text-dark" style="font-size: 0.75rem;"><%= t.getTimeProgressPercentage() %>%</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small text-muted" style="font-size: 0.72rem;">
+                                                    <strong><%= String.format("%.1f", t.getLoggedHours()) %>h</strong> / <%= String.format("%.1f", t.getEstimatedHours()) %>h
+                                                </span>
+                                                <% if (t.isOverEstimate()) { %>
+                                                    <span class="badge bg-danger text-white py-0 px-1" style="font-size: 0.65rem;">
+                                                        +<%= String.format("%.1f", t.getOvertimeHours()) %>h Over
+                                                    </span>
+                                                <% } %>
+                                            </div>
+                                        </td>
                                     </tr>
                                 <%  }
                                    } else { %>
                                     <tr>
-                                        <td colspan="5" class="text-center py-4 text-muted">No tasks currently created for this project.</td>
+                                        <td colspan="6" class="text-center py-4 text-muted">No tasks currently created for this project.</td>
                                     </tr>
                                 <% } %>
                             </tbody>
@@ -271,13 +306,20 @@
                                 </div>
                             </div>
                             <div class="row g-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Start Date</label>
                                     <input type="date" class="form-control" name="startDate">
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Due Date</label>
                                     <input type="date" class="form-control" name="dueDate" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Estimated Hours</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="estimatedHours" step="0.25" min="0" max="9999" placeholder="e.g. 16.0">
+                                        <span class="input-group-text">hrs</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

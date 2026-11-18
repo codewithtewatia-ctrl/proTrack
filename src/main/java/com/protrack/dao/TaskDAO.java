@@ -3,6 +3,7 @@ package com.protrack.dao;
 import com.protrack.model.Task;
 import com.protrack.model.TaskPriority;
 import com.protrack.model.TaskStatus;
+import com.protrack.model.TaskTimeLog;
 import java.util.List;
 import java.util.Map;
 
@@ -46,4 +47,14 @@ public interface TaskDAO extends GenericDAO<Task, Integer> {
     Map<TaskStatus, Integer> getStatusDistributionByProject(int projectId);
 
     Map<TaskPriority, Integer> getPriorityDistribution();
+
+    boolean logTime(int taskId, int userId, double hours, java.sql.Date logDate, String description);
+
+    List<TaskTimeLog> findTimeLogsByTaskId(int taskId);
+
+    List<TaskTimeLog> findTimeLogsByProjectId(int projectId);
+
+    double getTotalLoggedHoursForProject(int projectId);
+
+    double getTotalEstimatedHoursForProject(int projectId);
 }

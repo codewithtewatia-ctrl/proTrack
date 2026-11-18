@@ -124,6 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editTaskStatus').value = button.getAttribute('data-status') || 'TODO';
             document.getElementById('editTaskStartDate').value = button.getAttribute('data-start') || '';
             document.getElementById('editTaskDueDate').value = button.getAttribute('data-due') || '';
+            const estInput = document.getElementById('editTaskEstimatedHours');
+            if (estInput) {
+                estInput.value = button.getAttribute('data-estimated') || '0.0';
+            }
         });
     }
 
@@ -137,6 +141,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('statusTaskId').value = button.getAttribute('data-id') || '';
             document.getElementById('statusTaskTitle').innerText = button.getAttribute('data-title') || 'Task';
             document.getElementById('statusTaskSelect').value = button.getAttribute('data-status') || 'TODO';
+        });
+    }
+
+    // 8b. Log Task Time Modal Population
+    const logTimeModal = document.getElementById('logTimeModal');
+    if (logTimeModal) {
+        logTimeModal.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const taskIdInput = document.getElementById('logTimeTaskId');
+            if (taskIdInput) taskIdInput.value = button.getAttribute('data-id') || '';
+            const taskTitle = button.getAttribute('data-title') || button.getAttribute('data-name') || 'Task';
+            const logged = button.getAttribute('data-logged') || '0.0';
+            const estimated = button.getAttribute('data-estimated') || '0.0';
+
+            const titleEl = document.getElementById('logTimeTaskTitle');
+            if (titleEl) titleEl.innerText = taskTitle;
+            const infoEl = document.getElementById('logTimeTaskHoursInfo');
+            if (infoEl) infoEl.innerText = 'Current: ' + logged + 'h logged / ' + estimated + 'h estimated';
         });
     }
 

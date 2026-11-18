@@ -47,7 +47,7 @@
 | **Visual Analytics** | Chart.js | Chart.js 4.4.1 (Doughnut & Bar charts) |
 | **Password & Token Security** | BCrypt & SecureRandom | OpenBSD Blowfish password hashing & cryptographic CSRF tokens |
 | **Build & Packaging Tool** | Apache Maven | Maven 3.9+ (Produces standard `protrack.war`) |
-| **Automated Testing** | JUnit 5 & Mockito | 78 automated unit tests with mocked JDBC & services (JUnit Jupiter 5.10.2 + Mockito 5.11.0) |
+| **Automated Testing** | JUnit 5 & Mockito | 90 automated unit tests with mocked JDBC & services (JUnit Jupiter 5.10.2 + Mockito 5.11.0) |
 
 ---
 
@@ -250,6 +250,7 @@ erDiagram
 | **Edit / Delete Tasks** | :white_check_mark: Yes | :white_check_mark: Yes (Managed projects only) | :x: No (Blocked in Filter & Servlet) |
 | **View Assigned Tasks** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes |
 | **Update Task Status (TODO &rarr; COMPLETED)** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes (**Own assigned tasks only** - ownership verified) |
+| **Task Time Logging & Estimates Tracking** | :white_check_mark: Yes (Full access, log time on any task, set estimates) | :white_check_mark: Yes (Scoped to managed projects, set estimates, progress bars) | :white_check_mark: Yes (**Own assigned tasks only** - log work hours & view progress bar) |
 | **Interactive Kanban Board & Drag-and-Drop** | :white_check_mark: Yes | :white_check_mark: Yes (Managed projects) | :white_check_mark: Yes (**Own assigned tasks only**) |
 | **Reporting & CSV / PDF Export (`/export`)** | :white_check_mark: Yes (Company-wide milestones & overdue tasks) | :white_check_mark: Yes (Managed projects & overdue tasks only) | :x: No (403 Forbidden - Filter & Servlet enforced) |
 | **Self-Registration Role Assignment** | N/A (Admin only) | :x: Prevented | :white_check_mark: Yes (Forced strictly to `TEAM_MEMBER`) |
@@ -257,7 +258,7 @@ erDiagram
 | **Update Personal Profile & Password** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes (Minimum 8 chars) |
 | **View Audit Trail Activity Feed** | :white_check_mark: Yes | :white_check_mark: Yes | :white_check_mark: Yes |
 
-> **Task Ownership & Reporting Enforcement:** Even though `TaskServlet` handles status updates, backend business logic (`TaskService.updateTaskStatusWithRoleCheck`) cryptographically checks if the logged-in user is an Admin, the Project Manager of the project, or the exact `assignedTo` user. Team members cannot tamper with or update tasks belonging to other team members. Similarly, `ExportServlet` and `AuthenticationFilter` strictly restrict access so only Admins and Project Managers can export CSV milestone summaries and overdue audit reports (`403 Forbidden` for Team Members).
+> **Task Ownership & Reporting Enforcement:** Even though `TaskServlet` handles status updates and time logs, backend business logic (`TaskService.updateTaskStatusWithRoleCheck` and `TaskService.logTimeWithRoleCheck`) cryptographically checks if the logged-in user is an Admin, the Project Manager of the project, or the exact `assignedTo` user. Team members cannot tamper with, update, or log time on tasks belonging to other team members. Similarly, `ExportServlet` and `AuthenticationFilter` strictly restrict access so only Admins and Project Managers can export CSV milestone summaries and overdue audit reports (`403 Forbidden` for Team Members).
 
 ---
 
@@ -467,12 +468,13 @@ Execute the entire test suite using:
 ./mvnw test
 ```
 
-### Automated Test Suite Overview (78 Tests — 100% Passing):
+### Automated Test Suite Overview (90 Tests — 100% Passing):
 
 | Test Suite Class | Tests | Category | Key Assertions & Scenarios Verified |
 | :--- | :---: | :--- | :--- |
+| **`TaskTimeTrackingTest`** | 10 | Productivity & Time Tracking | • Task time progress percentage calculation (0%, 50%, >100%)<br>• Over-estimate detection and overtime hours calculation<br>• Remaining hours calculation before deadline<br>• Dynamic progress bar styling (`bg-primary`, `bg-warning` >= 85%, `bg-danger` overtime)<br>• Project aggregate estimated and logged hours calculation<br>• Team Member allowed to log time on assigned tasks<br>• Team Member blocked with `UnauthorizedAccessException` on unassigned tasks<br>• Project Manager allowed to log time on managed project tasks<br>• Project Manager blocked on other managers' projects<br>• Input validation rejecting negative or excessive (>24h) daily hours |
 | **`OverdueTaskScannerTest`** | 5 | Concurrency & Scheduler | • Thread-safe concurrent counter updates under `ReentrantLock`<br>• `ScheduledExecutorService` lifecycle management (start/stop)<br>• Overdue task scan execution via mock DAO<br>• Graceful database failure handling without crashing daemon thread<br>• Snapshot immutability across concurrent readers |
-| **`TaskServletAuthorizationTest`** | 8 | Servlet, Kanban & Security | • Project Manager blocked from cross-project task move (target project ownership check)<br>• Project Manager blocked from editing tasks in unmanaged projects<br>• Manager `/manager/tasks` scoped to manager's projects at DAO level<br>• Manager searching unowned `projectId` returns empty list<br>• Administrator sees all tasks across all projects<br>• Malformed date strings trigger descriptive format error<br>• AJAX Kanban drag-and-drop status update succeeds with valid CSRF token<br>• AJAX Kanban update denied when attempting unauthorized transition |
+| **`TaskServletAuthorizationTest`** | 10 | Servlet, Kanban & Security | • Project Manager blocked from cross-project task move (target project ownership check)<br>• Project Manager blocked from editing tasks in unmanaged projects<br>• Manager `/manager/tasks` scoped to manager's projects at DAO level<br>• Manager searching unowned `projectId` returns empty list<br>• Administrator sees all tasks across all projects<br>• Malformed date strings trigger descriptive format error<br>• AJAX Kanban drag-and-drop status update succeeds with valid CSRF token<br>• AJAX Kanban update denied when attempting unauthorized transition<br>• Standard form POST `logTime` records hours and redirects with flash message<br>• Asynchronous AJAX `logTime` returns JSON success response |
 | **`ProjectServletAuthorizationTest`** | 6 | Servlet & Ownership | • Project Manager viewing unmanaged project denied with HTTP 403 Forbidden (`403.jsp`)<br>• Project Manager viewing owned project succeeds (`manager/project-detail.jsp`)<br>• Administrator viewing any project workspace succeeds (`admin/project-detail.jsp`)<br>• Team Member viewing unassigned project denied with HTTP 403 Forbidden<br>• Team Member viewing assigned project succeeds and receives filtered list containing only their own tasks (`member/project-detail.jsp`)<br>• Malformed date strings trigger descriptive format error |
 | **`ExportServletTest`** | 5 | Servlet & Export Security | • Unauthenticated access to `/export` redirected to `/login`<br>• Team Member denied access with HTTP 403 Forbidden (Filter & Servlet enforced)<br>• Administrator exports company-wide project milestones CSV with UTF-8 BOM headers<br>• Project Manager export strictly scoped to managed projects and tasks<br>• Print/PDF format dispatching correctly forwards to executive printable report view |
 | **`ReportExportServiceTest`** | 3 | Service & Reporting | • RFC-4180 CSV generation with UTF-8 BOM (`\uFEFF`) for Microsoft Excel & Google Sheets compatibility<br>• Project Milestones CSV formatting with dynamic completion percentages<br>• Overdue tasks CSV formatting with real-time delinquency days calculation<br>• Escaping of double quotes, commas, and linebreaks |
@@ -488,7 +490,7 @@ Execute the entire test suite using:
 
 ```
 [INFO] Results:
-[INFO] Tests run: 78, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 90, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 
@@ -519,6 +521,7 @@ Execute the entire test suite using:
 - [x] **Reporting & Data Export RBAC:** `ExportServlet` and `AuthenticationFilter` enforce that only Project Managers and Administrators can download CSV summaries or view printable reports; Team Members receive HTTP 403 Forbidden.
 - [x] **RFC-4180 CSV & UTF-8 BOM Compatibility:** Exported CSV files include the UTF-8 Byte Order Mark (`\uFEFF`) for Microsoft Excel and Apple Numbers, with automatic escaping of quotes, commas, and linebreaks.
 - [x] **Interactive Kanban Board AJAX Transitions:** Task status drag-and-drop actions perform asynchronous CSRF-validated status updates with strict assignee and manager permission checks.
+- [x] **Task Time Logging & Estimates Progress Tracking:** Visual progress bar displays estimated vs. logged hours on task cards and backlog tables; warning (&ge; 85%) and danger (&gt; 100%) badges highlight overtime; scoped permission checks ensure team members log hours on their assigned tasks while project managers adjust estimates and track project-wide hours.
 - [x] **In-App Profile Picture Security:** Profile picture upload enforces image MIME types, 2MB size ceiling, live modal preview, and instant visual synchronization across navigation bars.
 
 ---

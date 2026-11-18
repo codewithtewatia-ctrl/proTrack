@@ -10,10 +10,13 @@ import com.protrack.dao.impl.TaskDAOImpl;
 import com.protrack.dao.impl.UserDAOImpl;
 import com.protrack.exception.AppException;
 import com.protrack.exception.TaskAssignmentException;
+import com.protrack.exception.UnauthorizedAccessException;
+import com.protrack.model.Project;
 import com.protrack.model.Role;
 import com.protrack.model.Task;
 import com.protrack.model.TaskPriority;
 import com.protrack.model.TaskStatus;
+import com.protrack.model.TaskTimeLog;
 import com.protrack.model.User;
 import com.protrack.util.ValidationUtil;
 
@@ -99,6 +102,12 @@ public class TaskService {
 
     public Task createTask(String title, String description, int projectId, Integer assignedTo,
                            TaskPriority priority, TaskStatus status, Date startDate, Date dueDate, Integer creatorUserId) throws AppException {
+        return createTask(title, description, projectId, assignedTo, priority, status, startDate, dueDate, 0.0, creatorUserId);
+    }
+
+    public Task createTask(String title, String description, int projectId, Integer assignedTo,
+                           TaskPriority priority, TaskStatus status, Date startDate, Date dueDate,
+                           Double estimatedHours, Integer creatorUserId) throws AppException {
         if (!ValidationUtil.isNotEmpty(title)) {
             throw new AppException("Task title is required.");
         }
@@ -120,10 +129,15 @@ public class TaskService {
 
         validateAssignee(assignedTo, projectId);
 
+        double est = (estimatedHours != null && estimatedHours > 0) ? estimatedHours : 0.0;
+        if (est > 9999.0) {
+            throw new AppException("Estimated hours cannot exceed 9999.");
+        }
+
         Task task = new Task(0, trimmedTitle, trimmedDesc, projectId, assignedTo,
                 priority != null ? priority : TaskPriority.MEDIUM,
                 status != null ? status : TaskStatus.TODO,
-                startDate, dueDate, creatorUserId);
+                startDate, dueDate, creatorUserId, est, 0.0);
 
         Task saved = taskDAO.save(task);
 
@@ -133,6 +147,12 @@ public class TaskService {
 
     public void updateTask(int taskId, String title, String description, int projectId, Integer assignedTo,
                            TaskPriority priority, TaskStatus status, Date startDate, Date dueDate, Integer actorUserId) throws AppException {
+        updateTask(taskId, title, description, projectId, assignedTo, priority, status, startDate, dueDate, null, actorUserId);
+    }
+
+    public void updateTask(int taskId, String title, String description, int projectId, Integer assignedTo,
+                           TaskPriority priority, TaskStatus status, Date startDate, Date dueDate,
+                           Double estimatedHours, Integer actorUserId) throws AppException {
         Task existing = getTaskById(taskId);
 
         if (!ValidationUtil.isNotEmpty(title)) {
@@ -161,6 +181,12 @@ public class TaskService {
         if (status != null) existing.setStatus(status);
         existing.setStartDate(startDate);
         existing.setDueDate(dueDate);
+        if (estimatedHours != null) {
+            if (estimatedHours < 0 || estimatedHours > 9999.0) {
+                throw new AppException("Estimated hours must be between 0 and 9999.");
+            }
+            existing.setEstimatedHours(estimatedHours);
+        }
 
         boolean updated = taskDAO.update(existing);
         if (!updated) {
@@ -216,5 +242,54 @@ public class TaskService {
 
     public List<Task> getTasksDueToday(Integer userId) {
         return taskDAO.findTasksDueToday(userId);
+    }
+
+    public void logTimeWithRoleCheck(int taskId, double hours, Date logDate, String description, User actor) throws AppException {
+        if (actor == null) {
+            throw new UnauthorizedAccessException("Authentication required.");
+        }
+        if (taskId <= 0) {
+            throw new AppException("Invalid task identifier.");
+        }
+        if (hours <= 0 || hours > 24.0) {
+            throw new AppException("Logged hours must be between 0.25 and 24 hours per entry.");
+        }
+        Date effectiveDate = (logDate != null) ? logDate : new Date(System.currentTimeMillis());
+
+        Task task = getTaskById(taskId);
+
+        // RBAC validation
+        if (actor.getRole() == Role.TEAM_MEMBER) {
+            if (task.getAssignedTo() == null || !task.getAssignedTo().equals(actor.getId())) {
+                throw new UnauthorizedAccessException("Access Denied: Team members can only log time on tasks assigned directly to them.");
+            }
+        } else if (actor.getRole() == Role.PROJECT_MANAGER) {
+            Project proj = projectDAO.findById(task.getProjectId())
+                    .orElseThrow(() -> new AppException("Associated project not found."));
+            if (proj.getManagerId() != actor.getId()) {
+                throw new UnauthorizedAccessException("Access Denied: You can only log time for tasks in projects you manage.");
+            }
+        }
+
+        String trimmedDesc = description != null ? description.trim() : "";
+        if (trimmedDesc.length() > 255) {
+            trimmedDesc = trimmedDesc.substring(0, 255);
+        }
+
+        boolean success = taskDAO.logTime(taskId, actor.getId(), hours, effectiveDate, trimmedDesc);
+        if (!success) {
+            throw new AppException("Failed to record time log entry.");
+        }
+
+        activityDAO.log(actor.getId(), "TASK_TIME_LOG",
+                "Logged " + String.format("%.2f", hours) + " hrs on task: \"" + task.getTaskTitle() + "\"", "TASK", taskId);
+    }
+
+    public List<TaskTimeLog> getTimeLogsForTask(int taskId) {
+        return taskDAO.findTimeLogsByTaskId(taskId);
+    }
+
+    public List<TaskTimeLog> getTimeLogsForProject(int projectId) {
+        return taskDAO.findTimeLogsByProjectId(projectId);
     }
 }

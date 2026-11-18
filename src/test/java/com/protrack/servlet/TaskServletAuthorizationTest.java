@@ -249,4 +249,50 @@ public class TaskServletAuthorizationTest {
         assertTrue(output.contains("\"success\":false"), "Response must indicate failure in JSON");
         assertTrue(output.contains("Not your task"), "Response must contain the error message");
     }
+
+    @Test
+    @DisplayName("Verify logTime via form POST successfully invokes TaskService and redirects")
+    public void testLogTimeViaFormPostRedirectsWithFlash() throws ServletException, IOException, AppException {
+        when(request.getRequestURI()).thenReturn("/protrack/member/tasks");
+        when(request.getParameter("action")).thenReturn("logTime");
+        when(request.getParameter("taskId")).thenReturn("15");
+        when(request.getParameter("hours")).thenReturn("4.5");
+        when(request.getParameter("logDate")).thenReturn("2026-03-01");
+        when(request.getParameter("description")).thenReturn("Sprint backlog completion");
+
+        User member = UserFactory.createUser(4, "Alex Rivera", "alex@protrack.com", "hash", Role.TEAM_MEMBER, "ACTIVE");
+        when(session.getAttribute("currentUser")).thenReturn(member);
+
+        taskServlet.doPost(request, response);
+
+        verify(mockTaskService, times(1)).logTimeWithRoleCheck(eq(15), eq(4.5), any(Date.class), eq("Sprint backlog completion"), eq(member));
+        verify(session).setAttribute(eq("flash_success"), contains("4.50 hours"));
+        verify(response).sendRedirect(contains("/member/tasks"));
+    }
+
+    @Test
+    @DisplayName("Verify logTime via AJAX returns 200 JSON success response")
+    public void testLogTimeViaAjaxReturnsJson() throws ServletException, IOException, AppException {
+        when(request.getRequestURI()).thenReturn("/protrack/manager/tasks");
+        when(request.getParameter("action")).thenReturn("logTime");
+        when(request.getParameter("taskId")).thenReturn("22");
+        when(request.getParameter("hours")).thenReturn("2.0");
+        when(request.getHeader("X-Requested-With")).thenReturn("XMLHttpRequest");
+
+        User pm = UserFactory.createUser(2, "Sarah", "sarah@protrack.com", "hash", Role.PROJECT_MANAGER, "ACTIVE");
+        when(session.getAttribute("currentUser")).thenReturn(pm);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        when(response.getWriter()).thenReturn(printWriter);
+
+        taskServlet.doPost(request, response);
+
+        verify(mockTaskService, times(1)).logTimeWithRoleCheck(eq(22), eq(2.0), any(), any(), eq(pm));
+        verify(response).setContentType("application/json");
+        printWriter.flush();
+        String output = stringWriter.toString();
+        assertTrue(output.contains("\"success\":true"), "Response must indicate success in JSON");
+        assertTrue(output.contains("2.00 hours"), "Response must contain logged hours in message");
+    }
 }

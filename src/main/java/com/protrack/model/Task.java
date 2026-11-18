@@ -18,6 +18,8 @@ public class Task extends BaseEntity {
     private Date startDate;
     private Date dueDate;
     private Integer createdBy;
+    private double estimatedHours = 0.0;
+    private double loggedHours = 0.0;
 
     // Display fields joined from other tables
     private String projectName;
@@ -31,6 +33,12 @@ public class Task extends BaseEntity {
 
     public Task(int id, String taskTitle, String description, int projectId, Integer assignedTo,
                 TaskPriority priority, TaskStatus status, Date startDate, Date dueDate, Integer createdBy) {
+        this(id, taskTitle, description, projectId, assignedTo, priority, status, startDate, dueDate, createdBy, 0.0, 0.0);
+    }
+
+    public Task(int id, String taskTitle, String description, int projectId, Integer assignedTo,
+                TaskPriority priority, TaskStatus status, Date startDate, Date dueDate, Integer createdBy,
+                double estimatedHours, double loggedHours) {
         super(id);
         this.taskTitle = taskTitle;
         this.description = description;
@@ -41,6 +49,8 @@ public class Task extends BaseEntity {
         this.startDate = startDate;
         this.dueDate = dueDate;
         this.createdBy = createdBy;
+        this.estimatedHours = estimatedHours;
+        this.loggedHours = loggedHours;
     }
 
     // Deadline and Alert Helper Methods
@@ -54,6 +64,43 @@ public class Task extends BaseEntity {
 
     public String getRelativeDueStatus() {
         return DateUtil.getRelativeDueStatus(this.dueDate, this.status != null ? this.status.name() : "TODO");
+    }
+
+    // Time Tracking & Productivity Helper Methods
+    public int getTimeProgressPercentage() {
+        if (estimatedHours <= 0) {
+            return loggedHours > 0 ? 100 : 0;
+        }
+        return (int) Math.round((loggedHours / estimatedHours) * 100);
+    }
+
+    public int getDisplayProgressPercentage() {
+        return Math.min(100, Math.max(0, getTimeProgressPercentage()));
+    }
+
+    public boolean isOverEstimate() {
+        return estimatedHours > 0 && loggedHours > estimatedHours;
+    }
+
+    public double getOvertimeHours() {
+        if (!isOverEstimate()) return 0.0;
+        return Math.round((loggedHours - estimatedHours) * 100.0) / 100.0;
+    }
+
+    public double getRemainingHours() {
+        if (estimatedHours <= loggedHours) return 0.0;
+        return Math.round((estimatedHours - loggedHours) * 100.0) / 100.0;
+    }
+
+    public String getTimeProgressBarClass() {
+        if (isOverEstimate()) {
+            return "bg-danger";
+        }
+        int pct = getTimeProgressPercentage();
+        if (pct >= 85) {
+            return "bg-warning";
+        }
+        return "bg-primary";
     }
 
     // Getters and Setters
@@ -159,5 +206,21 @@ public class Task extends BaseEntity {
 
     public void setCreatedByName(String createdByName) {
         this.createdByName = createdByName;
+    }
+
+    public double getEstimatedHours() {
+        return estimatedHours;
+    }
+
+    public void setEstimatedHours(double estimatedHours) {
+        this.estimatedHours = estimatedHours;
+    }
+
+    public double getLoggedHours() {
+        return loggedHours;
+    }
+
+    public void setLoggedHours(double loggedHours) {
+        this.loggedHours = loggedHours;
     }
 }

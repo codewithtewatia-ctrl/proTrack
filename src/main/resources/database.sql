@@ -19,6 +19,7 @@ USE `project_management_db`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS `task_time_logs`;
 DROP TABLE IF EXISTS `activity_logs`;
 DROP TABLE IF EXISTS `tasks`;
 DROP TABLE IF EXISTS `project_members`;
@@ -90,6 +91,8 @@ CREATE TABLE `tasks` (
     `start_date` DATE,
     `due_date` DATE NOT NULL,
     `created_by` INT NULL,
+    `estimated_hours` DECIMAL(6,2) DEFAULT 0.00,
+    `logged_hours` DECIMAL(6,2) DEFAULT 0.00,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `fk_tasks_project`
@@ -134,6 +137,26 @@ CREATE TABLE `system_settings` (
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Table 7: task_time_logs
+CREATE TABLE `task_time_logs` (
+    `log_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `task_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `hours_logged` DECIMAL(5,2) NOT NULL,
+    `log_date` DATE NOT NULL,
+    `description` VARCHAR(255) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_time_logs_task`
+        FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `fk_time_logs_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX `idx_time_logs_task` (`task_id`),
+    INDEX `idx_time_logs_user` (`user_id`),
+    INDEX `idx_time_logs_date` (`log_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Seed Data (BCrypt hashed passwords)
 INSERT INTO `users` (`user_id`, `full_name`, `email`, `password`, `role`, `status`) VALUES
 (1, 'Administrator', 'admin@protrack.com', '$2a$10$dkSTgGWz/61knT01f29PqOUiiQE1htpJfrHqw/oNGYZNIaNh2b2IC', 'ADMIN', 'ACTIVE'),
@@ -161,20 +184,33 @@ INSERT INTO `project_members` (`project_id`, `user_id`) VALUES
 (5, 5), (5, 6);
 
 -- Tasks
-INSERT INTO `tasks` (`task_id`, `task_title`, `description`, `project_id`, `assigned_to`, `priority`, `status`, `start_date`, `due_date`, `created_by`) VALUES
-(1, 'Design Database Schema for Products & Orders', 'Normalize SQL tables for product catalog, inventory variations, categories, order items, and invoices.', 1, 4, 'HIGH', 'COMPLETED', '2026-01-12', '2026-01-25', 2),
-(2, 'Integrate Stripe Payment Gateway API', 'Implement secure webhook handlers, 3D-Secure card verification, and automatic refund flows.', 1, 4, 'CRITICAL', 'IN_PROGRESS', '2026-02-01', '2026-03-10', 2),
-(3, 'Design UI Mockups for Checkout Funnel', 'Create responsive Figma prototypes for checkout, order summary, address validation, and confirmation screen.', 1, 6, 'MEDIUM', 'COMPLETED', '2026-01-15', '2026-02-05', 2),
-(4, 'Automated Test Suite for Shopping Cart', 'Write JUnit integration tests and Selenium web tests covering coupon codes, tax calculations, and cart expiry.', 1, 5, 'HIGH', 'REVIEW', '2026-02-10', '2026-03-05', 2),
-(5, 'Implement Elasticsearch Product Search', 'Configure faceted search filters by brand, price range, ratings, and instant autocomplete suggestions.', 1, 7, 'HIGH', 'TODO', '2026-03-01', '2026-03-25', 2),
-(6, 'Biometric Authentication Integration', 'Implement Face ID and Fingerprint biometric security with encrypted hardware keychain storage.', 2, 4, 'CRITICAL', 'IN_PROGRESS', '2026-02-05', '2026-02-28', 3),
-(7, 'Dark Mode Color Palette & Asset Design', 'Design high-contrast dark theme UI kit with accessible typography and WCAG AAA compliance.', 2, 6, 'MEDIUM', 'COMPLETED', '2026-02-01', '2026-02-18', 3),
-(8, 'Security Audit & Penetration Testing', 'Test API endpoints against OWASP Mobile Top 10 vulnerabilities, SSL pinning, and SQL injection.', 2, 5, 'CRITICAL', 'TODO', '2026-02-20', '2026-03-15', 3),
-(9, 'Dockerize Microservices Architecture', 'Write multi-stage Dockerfiles for backend services, optimize image sizes, and scan with Trivy.', 3, 7, 'HIGH', 'TODO', '2026-03-05', '2026-03-20', 2),
-(10, 'Helm Charts & Terraform Provisioning', 'Write Infrastructure as Code scripts for VPC, EKS cluster, managed RDS instances, and IAM roles.', 3, 4, 'MEDIUM', 'TODO', '2026-03-15', '2026-04-10', 2),
-(11, 'Train NLP Intent Classification Model', 'Fine-tune BERT model on 10,000 historical support ticket transcripts for intent detection.', 4, 7, 'HIGH', 'COMPLETED', '2025-10-15', '2025-11-30', 3),
-(12, 'Zendesk & Salesforce CRM Integration', 'Connect bot responses to create escalation tickets for tier-2 human representatives.', 4, 5, 'MEDIUM', 'COMPLETED', '2025-12-01', '2026-01-10', 3),
-(13, 'Biometric Attendance Clock-in Sync', 'Sync hardware fingerprint machine logs via TCP socket into MySQL attendance table.', 5, 5, 'LOW', 'TODO', '2026-02-20', '2026-04-01', 2);
+INSERT INTO `tasks` (`task_id`, `task_title`, `description`, `project_id`, `assigned_to`, `priority`, `status`, `start_date`, `due_date`, `created_by`, `estimated_hours`, `logged_hours`) VALUES
+(1, 'Design Database Schema for Products & Orders', 'Normalize SQL tables for product catalog, inventory variations, categories, order items, and invoices.', 1, 4, 'HIGH', 'COMPLETED', '2026-01-12', '2026-01-25', 2, 24.00, 22.50),
+(2, 'Integrate Stripe Payment Gateway API', 'Implement secure webhook handlers, 3D-Secure card verification, and automatic refund flows.', 1, 4, 'CRITICAL', 'IN_PROGRESS', '2026-02-01', '2026-03-10', 2, 40.00, 32.00),
+(3, 'Design UI Mockups for Checkout Funnel', 'Create responsive Figma prototypes for checkout, order summary, address validation, and confirmation screen.', 1, 6, 'MEDIUM', 'COMPLETED', '2026-01-15', '2026-02-05', 2, 16.00, 16.00),
+(4, 'Automated Test Suite for Shopping Cart', 'Write JUnit integration tests and Selenium web tests covering coupon codes, tax calculations, and cart expiry.', 1, 5, 'HIGH', 'REVIEW', '2026-02-10', '2026-03-05', 2, 20.00, 22.00),
+(5, 'Implement Elasticsearch Product Search', 'Configure faceted search filters by brand, price range, ratings, and instant autocomplete suggestions.', 1, 7, 'HIGH', 'TODO', '2026-03-01', '2026-03-25', 2, 30.00, 0.00),
+(6, 'Biometric Authentication Integration', 'Implement Face ID and Fingerprint biometric security with encrypted hardware keychain storage.', 2, 4, 'CRITICAL', 'IN_PROGRESS', '2026-02-05', '2026-02-28', 3, 35.00, 30.00),
+(7, 'Dark Mode Color Palette & Asset Design', 'Design high-contrast dark theme UI kit with accessible typography and WCAG AAA compliance.', 2, 6, 'MEDIUM', 'COMPLETED', '2026-02-01', '2026-02-18', 3, 12.00, 10.00),
+(8, 'Security Audit & Penetration Testing', 'Test API endpoints against OWASP Mobile Top 10 vulnerabilities, SSL pinning, and SQL injection.', 2, 5, 'CRITICAL', 'TODO', '2026-02-20', '2026-03-15', 3, 25.00, 0.00),
+(9, 'Dockerize Microservices Architecture', 'Write multi-stage Dockerfiles for backend services, optimize image sizes, and scan with Trivy.', 3, 7, 'HIGH', 'TODO', '2026-03-05', '2026-03-20', 2, 18.00, 0.00),
+(10, 'Helm Charts & Terraform Provisioning', 'Write Infrastructure as Code scripts for VPC, EKS cluster, managed RDS instances, and IAM roles.', 3, 4, 'MEDIUM', 'TODO', '2026-03-15', '2026-04-10', 2, 30.00, 0.00),
+(11, 'Train NLP Intent Classification Model', 'Fine-tune BERT model on 10,000 historical support ticket transcripts for intent detection.', 4, 7, 'HIGH', 'COMPLETED', '2025-10-15', '2025-11-30', 3, 45.00, 42.00),
+(12, 'Zendesk & Salesforce CRM Integration', 'Connect bot responses to create escalation tickets for tier-2 human representatives.', 4, 5, 'MEDIUM', 'COMPLETED', '2025-12-01', '2026-01-10', 3, 20.00, 18.50),
+(13, 'Biometric Attendance Clock-in Sync', 'Sync hardware fingerprint machine logs via TCP socket into MySQL attendance table.', 5, 5, 'LOW', 'TODO', '2026-02-20', '2026-04-01', 2, 15.00, 0.00);
+
+-- Task Time Logs
+INSERT INTO `task_time_logs` (`task_id`, `user_id`, `hours_logged`, `log_date`, `description`) VALUES
+(1, 4, 8.00, '2026-01-15', 'Initial ERD and relational table mapping'),
+(1, 4, 14.50, '2026-01-20', 'Index optimization and foreign key constraints'),
+(2, 4, 16.00, '2026-02-10', 'Payment intent API and Stripe customer creation'),
+(2, 4, 16.00, '2026-02-20', 'Webhook signature validation and idempotency handling'),
+(3, 6, 16.00, '2026-01-28', 'Figma checkout prototypes and responsive layouts'),
+(4, 5, 12.00, '2026-02-15', 'Cart calculation unit test cases'),
+(4, 5, 10.00, '2026-02-25', 'Edge cases for coupon code discounts and tax calculation'),
+(6, 4, 15.00, '2026-02-10', 'Face ID and Keychain crypto wrapper'),
+(6, 4, 15.00, '2026-02-18', 'Fallback PIN authentication flows'),
+(7, 6, 10.00, '2026-02-12', 'WCAG AAA contrast palette testing and tokens');
 
 -- Activity Logs
 INSERT INTO `activity_logs` (`user_id`, `action`, `details`, `entity_type`, `entity_id`, `created_at`) VALUES

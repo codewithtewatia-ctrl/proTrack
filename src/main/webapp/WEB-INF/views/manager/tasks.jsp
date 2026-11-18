@@ -173,7 +173,8 @@
                             <th>Priority</th>
                             <th>Status</th>
                             <th>Due Date</th>
-                            <th class="text-end" style="width: 120px;">Actions</th>
+                            <th style="min-width: 150px;">Time Track</th>
+                            <th class="text-end" style="width: 140px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -215,8 +216,36 @@
                                         <span class="badge bg-warning text-dark small mt-1">Due Today</span>
                                     <% } %>
                                 </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <div class="progress flex-grow-1" style="height: 6px; background-color: #e9ecef; border-radius: 3px;">
+                                            <div class="progress-bar <%= t.getTimeProgressBarClass() %>" role="progressbar"
+                                                 style="width: <%= t.getDisplayProgressPercentage() %>%;"
+                                                 aria-valuenow="<%= t.getTimeProgressPercentage() %>" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span class="small fw-bold text-dark" style="font-size: 0.75rem;"><%= t.getTimeProgressPercentage() %>%</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="small text-muted" style="font-size: 0.72rem;">
+                                            <strong><%= String.format("%.1f", t.getLoggedHours()) %>h</strong> / <%= String.format("%.1f", t.getEstimatedHours()) %>h
+                                        </span>
+                                        <% if (t.isOverEstimate()) { %>
+                                            <span class="badge bg-danger text-white py-0 px-1" style="font-size: 0.65rem;" title="Over estimate by <%= String.format("%.1f", t.getOvertimeHours()) %>h">
+                                                +<%= String.format("%.1f", t.getOvertimeHours()) %>h Over
+                                            </span>
+                                        <% } %>
+                                    </div>
+                                </td>
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-custom" title="Log Hours"
+                                                data-bs-toggle="modal" data-bs-target="#logTimeModal"
+                                                data-id="<%= t.getId() %>"
+                                                data-title="<%= ValidationUtil.escapeXml(t.getTaskTitle()) %>"
+                                                data-logged="<%= String.format("%.1f", t.getLoggedHours()) %>"
+                                                data-estimated="<%= String.format("%.1f", t.getEstimatedHours()) %>">
+                                            <i class="bi bi-stopwatch text-primary"></i>
+                                        </button>
                                         <button type="button" class="btn btn-outline-custom" title="Edit Task"
                                                 data-bs-toggle="modal" data-bs-target="#editTaskModal"
                                                 data-id="<%= t.getId() %>"
@@ -227,7 +256,8 @@
                                                 data-priority="<%= t.getPriority().name() %>"
                                                 data-status="<%= t.getStatus().name() %>"
                                                 data-start="<%= DateUtil.formatInputDate(t.getStartDate()) %>"
-                                                data-due="<%= DateUtil.formatInputDate(t.getDueDate()) %>">
+                                                data-due="<%= DateUtil.formatInputDate(t.getDueDate()) %>"
+                                                data-estimated="<%= t.getEstimatedHours() %>">
                                             <i class="bi bi-pencil-square text-secondary"></i>
                                         </button>
                                         <button type="button" class="btn btn-outline-custom" title="Delete Task"
@@ -243,7 +273,7 @@
                         <%  }
                            } else { %>
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
+                                <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="bi bi-check2-all fs-1 d-block mb-2 text-secondary"></i>
                                     No tasks found matching criteria.
                                 </td>
@@ -326,13 +356,20 @@
                         </div>
                     </div>
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Start Date</label>
                             <input type="date" class="form-control" name="startDate">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Due Date</label>
                             <input type="date" class="form-control" name="dueDate" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Estimated Hours</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" name="estimatedHours" step="0.25" min="0" max="9999" placeholder="e.g. 16.0">
+                                <span class="input-group-text">hrs</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -412,13 +449,20 @@
                         </div>
                     </div>
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Start Date</label>
                             <input type="date" class="form-control" id="editTaskStartDate" name="startDate">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Due Date</label>
                             <input type="date" class="form-control" id="editTaskDueDate" name="dueDate" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Estimated Hours</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="editTaskEstimatedHours" name="estimatedHours" step="0.25" min="0" max="9999" placeholder="0.0">
+                                <span class="input-group-text">hrs</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -453,6 +497,55 @@
                         <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-sm btn-danger px-3"><i class="bi bi-trash3 me-1"></i>Delete</button>
                     </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     MODAL: Log Time Modal
+     ========================================================================= -->
+<div class="modal fade" id="logTimeModal" tabindex="-1" aria-labelledby="logTimeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content border-0 shadow">
+            <form action="<%= request.getContextPath() %>/manager/tasks" method="POST">
+                <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+                <input type="hidden" name="action" value="logTime">
+                <input type="hidden" id="logTimeTaskId" name="taskId" value="">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="logTimeModalLabel">
+                        <i class="bi bi-clock-history text-primary me-2"></i>Log Task Work Hours
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="text-muted small mb-1">Task</label>
+                        <div class="fw-semibold text-dark fs-6" id="logTimeTaskTitle">Task Title</div>
+                        <div class="small text-muted mt-1" id="logTimeTaskHoursInfo">Current: 0.0h logged / 0.0h estimated</div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Hours Spent</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" name="hours" step="0.25" min="0.25" max="24" placeholder="e.g. 2.5" required>
+                                <span class="input-group-text">hrs</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Work Date</label>
+                            <input type="date" class="form-control" name="logDate" value="<%= DateUtil.formatInputDate(new java.sql.Date(System.currentTimeMillis())) %>" required>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Work Description / Progress Notes</label>
+                        <textarea class="form-control" name="description" rows="2" placeholder="Briefly describe what was accomplished..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Save Logged Time</button>
                 </div>
             </form>
         </div>

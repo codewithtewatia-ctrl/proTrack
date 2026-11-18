@@ -21,6 +21,8 @@ public class Project extends BaseEntity {
     private int totalTasks;
     private int completedTasks;
     private int pendingTasks;
+    private double totalEstimatedHours;
+    private double totalLoggedHours;
 
     public Project() {
         super();
@@ -39,6 +41,30 @@ public class Project extends BaseEntity {
     public int getProgressPercentage() {
         if (totalTasks == 0) return 0;
         return (int) Math.round(((double) completedTasks / totalTasks) * 100);
+    }
+
+    public int getTimeProgressPercentage() {
+        if (totalEstimatedHours <= 0) return totalLoggedHours > 0 ? 100 : 0;
+        return (int) Math.round((totalLoggedHours / totalEstimatedHours) * 100);
+    }
+
+    public int getDisplayTimeProgressPercentage() {
+        return Math.min(100, Math.max(0, getTimeProgressPercentage()));
+    }
+
+    public boolean isOverEstimate() {
+        return totalEstimatedHours > 0 && totalLoggedHours > totalEstimatedHours;
+    }
+
+    public double getOvertimeHours() {
+        if (!isOverEstimate()) return 0.0;
+        return Math.round((totalLoggedHours - totalEstimatedHours) * 100.0) / 100.0;
+    }
+
+    public String getTimeProgressBarClass() {
+        if (isOverEstimate()) return "bg-danger";
+        if (getTimeProgressPercentage() >= 85) return "bg-warning";
+        return "bg-primary";
     }
 
     public String getStatusBadgeClass() {
@@ -140,5 +166,21 @@ public class Project extends BaseEntity {
 
     public void setPendingTasks(int pendingTasks) {
         this.pendingTasks = pendingTasks;
+    }
+
+    public double getTotalEstimatedHours() {
+        return totalEstimatedHours;
+    }
+
+    public void setTotalEstimatedHours(double totalEstimatedHours) {
+        this.totalEstimatedHours = totalEstimatedHours;
+    }
+
+    public double getTotalLoggedHours() {
+        return totalLoggedHours;
+    }
+
+    public void setTotalLoggedHours(double totalLoggedHours) {
+        this.totalLoggedHours = totalLoggedHours;
     }
 }

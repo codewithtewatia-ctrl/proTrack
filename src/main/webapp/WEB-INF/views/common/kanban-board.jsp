@@ -47,6 +47,24 @@
             sb.append("  <div class=\"kanban-card-desc\">").append(descEsc).append("</div>\n");
         }
 
+        // Time Tracking & Productivity Progress Bar
+        sb.append("  <div class=\"kanban-time-track mb-2\">\n")
+          .append("    <div class=\"d-flex justify-content-between align-items-center mb-1\" style=\"font-size: 0.7rem;\">\n")
+          .append("      <span class=\"text-muted\"><i class=\"bi bi-clock-history me-1\"></i>")
+          .append(String.format("%.1f", t.getLoggedHours())).append(" / ").append(String.format("%.1f", t.getEstimatedHours())).append("h</span>\n");
+        if (t.isOverEstimate()) {
+            sb.append("      <span class=\"badge bg-danger text-white py-0 px-1\" style=\"font-size: 0.65rem;\">+")
+              .append(String.format("%.1f", t.getOvertimeHours())).append("h Over</span>\n");
+        } else {
+            sb.append("      <span class=\"fw-bold text-dark\">").append(t.getTimeProgressPercentage()).append("%</span>\n");
+        }
+        sb.append("    </div>\n")
+          .append("    <div class=\"progress\" style=\"height: 4px; background-color: #e9ecef; border-radius: 2px;\">\n")
+          .append("      <div class=\"progress-bar ").append(t.getTimeProgressBarClass()).append("\" style=\"width: ")
+          .append(t.getDisplayProgressPercentage()).append("%;\"></div>\n")
+          .append("    </div>\n")
+          .append("  </div>\n");
+
         // Bottom Row: Assignee & Due Date
         sb.append("  <div class=\"kanban-card-footer\">\n")
           .append("    <div class=\"kanban-assignee\">\n")
@@ -69,7 +87,15 @@
           .append("    <div class=\"d-flex gap-1\">\n");
 
         if (isManagerOrAdmin) {
-            sb.append("      <button type=\"button\" class=\"btn btn-sm btn-outline-custom py-0 px-1\" title=\"Edit Task\" ")
+            sb.append("      <button type=\"button\" class=\"btn btn-sm btn-outline-custom py-0 px-1\" title=\"Log Time\" ")
+              .append("data-bs-toggle=\"modal\" data-bs-target=\"#logTimeModal\" ")
+              .append("data-id=\"").append(t.getId()).append("\" ")
+              .append("data-title=\"").append(titleEsc).append("\" ")
+              .append("data-logged=\"").append(String.format("%.1f", t.getLoggedHours())).append("\" ")
+              .append("data-estimated=\"").append(String.format("%.1f", t.getEstimatedHours())).append("\">\n")
+              .append("        <i class=\"bi bi-stopwatch text-primary\" style=\"font-size: 0.75rem;\"></i>\n")
+              .append("      </button>\n")
+              .append("      <button type=\"button\" class=\"btn btn-sm btn-outline-custom py-0 px-1\" title=\"Edit Task\" ")
               .append("data-bs-toggle=\"modal\" data-bs-target=\"#editTaskModal\" ")
               .append("data-id=\"").append(t.getId()).append("\" ")
               .append("data-title=\"").append(titleEsc).append("\" ")
@@ -79,7 +105,8 @@
               .append("data-priority=\"").append(t.getPriority().name()).append("\" ")
               .append("data-status=\"").append(t.getStatus().name()).append("\" ")
               .append("data-start=\"").append(DateUtil.formatInputDate(t.getStartDate())).append("\" ")
-              .append("data-due=\"").append(DateUtil.formatInputDate(t.getDueDate())).append("\">\n")
+              .append("data-due=\"").append(DateUtil.formatInputDate(t.getDueDate())).append("\" ")
+              .append("data-estimated=\"").append(t.getEstimatedHours()).append("\">\n")
               .append("        <i class=\"bi bi-pencil\" style=\"font-size: 0.75rem;\"></i>\n")
               .append("      </button>\n")
               .append("      <button type=\"button\" class=\"btn btn-sm btn-outline-custom py-0 px-1 text-danger\" title=\"Delete Task\" ")
@@ -90,6 +117,14 @@
               .append("        <i class=\"bi bi-trash3\" style=\"font-size: 0.75rem;\"></i>\n")
               .append("      </button>\n");
         } else {
+            sb.append("      <button type=\"button\" class=\"btn btn-sm btn-outline-custom py-0 px-1\" title=\"Log Time\" ")
+              .append("data-bs-toggle=\"modal\" data-bs-target=\"#logTimeModal\" ")
+              .append("data-id=\"").append(t.getId()).append("\" ")
+              .append("data-title=\"").append(titleEsc).append("\" ")
+              .append("data-logged=\"").append(String.format("%.1f", t.getLoggedHours())).append("\" ")
+              .append("data-estimated=\"").append(String.format("%.1f", t.getEstimatedHours())).append("\">\n")
+              .append("        <i class=\"bi bi-stopwatch text-primary\" style=\"font-size: 0.75rem;\"></i>\n")
+              .append("      </button>\n");
             // Team Member Quick Transition Dropdown
             sb.append("      <div class=\"dropdown\">\n")
               .append("        <button class=\"btn btn-sm btn-outline-custom py-0 px-2 dropdown-toggle\" type=\"button\" data-bs-toggle=\"dropdown\" style=\"font-size: 0.7rem;\">\n")
