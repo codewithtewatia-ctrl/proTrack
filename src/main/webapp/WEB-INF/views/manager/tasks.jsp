@@ -138,12 +138,12 @@
                         <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header"><i class="bi bi-file-earmark-pdf me-1"></i> Print / PDF Document</h6></li>
                         <li>
-                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=overdue&format=pdf">
+                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=overdue&format=pdf" target="_self">
                                 <i class="bi bi-printer-fill text-danger me-2"></i> Overdue Tasks Report (PDF)
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=tasks&format=pdf<%= selectedProject > 0 ? "&projectId=" + selectedProject : "" %>">
+                            <a class="dropdown-item" href="<%= request.getContextPath() %>/export?type=tasks&format=pdf<%= selectedProject > 0 ? "&projectId=" + selectedProject : "" %>" target="_self">
                                 <i class="bi bi-printer-fill text-primary me-2"></i> Tasks Summary Report (PDF)
                             </a>
                         </li>
