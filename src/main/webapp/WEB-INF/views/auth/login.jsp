@@ -110,6 +110,9 @@
             <div class="mb-4">
                 <div class="d-flex justify-content-between align-items-center">
                     <label for="loginPassword" class="form-label">Password</label>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="small text-primary text-decoration-none fw-medium">
+                        Forgot password?
+                    </a>
                 </div>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-key"></i></span>
@@ -149,6 +152,9 @@
         </div>
     </div>
 </div>
+
+<!-- Self-Service Password Reset Modal -->
+<jsp:include page="../common/forgot-password-modal.jsp" />
 
 <!-- Bootstrap 5 Bundle JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

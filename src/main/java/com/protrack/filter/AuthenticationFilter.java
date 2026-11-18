@@ -75,7 +75,8 @@ public class AuthenticationFilter implements Filter {
 
         // 2. Public auth endpoints
         boolean isPublicPath = uri.equals("/login") || uri.equals("/register") || uri.equals("/index.jsp")
-                || uri.equals("/") || uri.startsWith("/error");
+                || uri.equals("/") || uri.startsWith("/error") || uri.startsWith("/forgot-password")
+                || uri.startsWith("/api/forgot-password");
 
         if (currentUser == null) {
             // Unauthenticated user

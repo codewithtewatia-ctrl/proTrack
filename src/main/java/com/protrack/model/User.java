@@ -16,6 +16,7 @@ public class User extends BaseEntity {
     protected Role role;
     protected String status = "ACTIVE"; // ACTIVE or INACTIVE
     protected String profilePicture; // Optional avatar URL or Base64 data URI
+    protected String contactNumber; // Contact / Mobile phone number for SMS/Contact OTP
 
     public User() {
         super();
@@ -41,6 +42,18 @@ public class User extends BaseEntity {
 
     public void setProfilePicture(String profilePicture) {
         this.profilePicture = profilePicture;
+    }
+
+    public String getContactNumber() {
+        return contactNumber;
+    }
+
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
+    }
+
+    public boolean hasContactNumber() {
+        return contactNumber != null && !contactNumber.trim().isEmpty();
     }
 
     // Role-based capability checks (Demonstrates Polymorphism in subclasses)

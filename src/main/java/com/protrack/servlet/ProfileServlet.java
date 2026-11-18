@@ -70,8 +70,9 @@ public class ProfileServlet extends HttpServlet {
             if ("updateProfile".equalsIgnoreCase(action)) {
                 String fullName = request.getParameter("fullName");
                 String email = request.getParameter("email");
+                String contactNumber = request.getParameter("contactNumber");
 
-                userService.updateProfile(currentUser.getId(), fullName, email);
+                userService.updateProfile(currentUser.getId(), fullName, email, contactNumber);
 
                 // Reload fresh user from DB to ensure trimmed and lowercased values are in session
                 User updatedUser = userService.getUserById(currentUser.getId());

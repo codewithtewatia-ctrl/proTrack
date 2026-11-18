@@ -40,6 +40,12 @@ public class UserDAOImpl implements UserDAO {
             // Field may not be present in legacy queries
         }
 
+        try {
+            user.setContactNumber(rs.getString("contact_number"));
+        } catch (SQLException ignored) {
+            // Field may not be present in legacy queries
+        }
+
         return user;
     }
 
@@ -149,7 +155,7 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public User save(User user) {
-        String sql = "INSERT INTO users (full_name, email, password, role, status) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (full_name, email, password, role, status, contact_number) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, user.getFullName());
@@ -157,6 +163,7 @@ public class UserDAOImpl implements UserDAO {
             ps.setString(3, user.getPassword());
             ps.setString(4, user.getRole() != null ? user.getRole().name() : Role.TEAM_MEMBER.name());
             ps.setString(5, user.getStatus() != null ? user.getStatus() : "ACTIVE");
+            ps.setString(6, user.getContactNumber());
 
             int affected = ps.executeUpdate();
             if (affected > 0) {
@@ -168,24 +175,57 @@ public class UserDAOImpl implements UserDAO {
             }
             return user;
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to insert user: " + user.getEmail(), e);
+            String fallbackSql = "INSERT INTO users (full_name, email, password, role, status) VALUES (?, ?, ?, ?, ?)";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(fallbackSql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, user.getFullName());
+                ps.setString(2, user.getEmail().trim().toLowerCase());
+                ps.setString(3, user.getPassword());
+                ps.setString(4, user.getRole() != null ? user.getRole().name() : Role.TEAM_MEMBER.name());
+                ps.setString(5, user.getStatus() != null ? user.getStatus() : "ACTIVE");
+
+                int affected = ps.executeUpdate();
+                if (affected > 0) {
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+                        if (rs.next()) {
+                            user.setId(rs.getInt(1));
+                        }
+                    }
+                }
+                return user;
+            } catch (SQLException ex) {
+                throw new DatabaseOperationException("Failed to insert user: " + user.getEmail(), ex);
+            }
         }
     }
 
     @Override
     public boolean update(User user) {
-        String sql = "UPDATE users SET full_name = ?, email = ?, role = ?, status = ? WHERE user_id = ?";
+        String sql = "UPDATE users SET full_name = ?, email = ?, role = ?, status = ?, contact_number = ? WHERE user_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, user.getFullName());
             ps.setString(2, user.getEmail().trim().toLowerCase());
             ps.setString(3, user.getRole() != null ? user.getRole().name() : Role.TEAM_MEMBER.name());
             ps.setString(4, user.getStatus() != null ? user.getStatus() : "ACTIVE");
-            ps.setInt(5, user.getId());
+            ps.setString(5, user.getContactNumber());
+            ps.setInt(6, user.getId());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            throw new DatabaseOperationException("Failed to update user: " + user.getId(), e);
+            String fallbackSql = "UPDATE users SET full_name = ?, email = ?, role = ?, status = ? WHERE user_id = ?";
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(fallbackSql)) {
+                ps.setString(1, user.getFullName());
+                ps.setString(2, user.getEmail().trim().toLowerCase());
+                ps.setString(3, user.getRole() != null ? user.getRole().name() : Role.TEAM_MEMBER.name());
+                ps.setString(4, user.getStatus() != null ? user.getStatus() : "ACTIVE");
+                ps.setInt(5, user.getId());
+
+                return ps.executeUpdate() > 0;
+            } catch (SQLException ex) {
+                throw new DatabaseOperationException("Failed to update user: " + user.getId(), ex);
+            }
         }
     }
 
@@ -280,5 +320,27 @@ public class UserDAOImpl implements UserDAO {
             throw new DatabaseOperationException("Failed to check if email exists: " + email, e);
         }
         return false;
+    }
+
+    @Override
+    public Optional<User> findByContactNumber(String contactNumber) {
+        if (contactNumber == null || contactNumber.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        String cleanNumber = contactNumber.replaceAll("[^0-9]", "");
+        String sql = "SELECT * FROM users WHERE contact_number = ? OR REPLACE(REPLACE(REPLACE(contact_number, ' ', ''), '-', ''), '+', '') = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, contactNumber.trim());
+            ps.setString(2, cleanNumber);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapRowToUser(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseOperationException("Failed to find user by contact number: " + contactNumber, e);
+        }
+        return Optional.empty();
     }
 }

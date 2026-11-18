@@ -38,6 +38,7 @@ CREATE TABLE `users` (
     `role` ENUM('ADMIN', 'PROJECT_MANAGER', 'TEAM_MEMBER') NOT NULL DEFAULT 'TEAM_MEMBER',
     `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
     `profile_picture` TEXT DEFAULT NULL,
+    `contact_number` VARCHAR(30) DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_users_role` (`role`),
@@ -157,15 +158,34 @@ CREATE TABLE `task_time_logs` (
     INDEX `idx_time_logs_date` (`log_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Table 8: password_reset_otps
+CREATE TABLE `password_reset_otps` (
+    `otp_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `email` VARCHAR(100) NOT NULL,
+    `contact_number` VARCHAR(30) DEFAULT NULL,
+    `otp_code` VARCHAR(10) NOT NULL,
+    `channel` VARCHAR(20) NOT NULL, -- 'MAIL' or 'CONTACT'
+    `expires_at` TIMESTAMP NOT NULL,
+    `is_used` BOOLEAN DEFAULT FALSE,
+    `attempts` INT DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_otp_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX `idx_otp_email` (`email`),
+    INDEX `idx_otp_code` (`otp_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Seed Data (BCrypt hashed passwords)
-INSERT INTO `users` (`user_id`, `full_name`, `email`, `password`, `role`, `status`) VALUES
-(1, 'Administrator', 'admin@protrack.com', '$2a$10$dkSTgGWz/61knT01f29PqOUiiQE1htpJfrHqw/oNGYZNIaNh2b2IC', 'ADMIN', 'ACTIVE'),
-(2, 'Sarah Jenkins', 'sarah.pm@protrack.com', '$2a$10$it8pPyDxU4ZPt7TCx3NJkep1cj1QGTN.N4pJ2oVW6PTuOiLHrNSfC', 'PROJECT_MANAGER', 'ACTIVE'),
-(3, 'David Miller', 'david.pm@protrack.com', '$2a$10$it8pPyDxU4ZPt7TCx3NJkep1cj1QGTN.N4pJ2oVW6PTuOiLHrNSfC', 'PROJECT_MANAGER', 'ACTIVE'),
-(4, 'Alex Rivera', 'alex.dev@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE'),
-(5, 'Emma Watson', 'emma.qa@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE'),
-(6, 'Liam Chen', 'liam.design@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE'),
-(7, 'Sophia Martinez', 'sophia.dev@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE');
+INSERT INTO `users` (`user_id`, `full_name`, `email`, `password`, `role`, `status`, `contact_number`) VALUES
+(1, 'Administrator', 'admin@protrack.com', '$2a$10$dkSTgGWz/61knT01f29PqOUiiQE1htpJfrHqw/oNGYZNIaNh2b2IC', 'ADMIN', 'ACTIVE', '+1 555-014-9921'),
+(2, 'Sarah Jenkins', 'sarah.pm@protrack.com', '$2a$10$it8pPyDxU4ZPt7TCx3NJkep1cj1QGTN.N4pJ2oVW6PTuOiLHrNSfC', 'PROJECT_MANAGER', 'ACTIVE', '+1 555-019-2834'),
+(3, 'David Miller', 'david.pm@protrack.com', '$2a$10$it8pPyDxU4ZPt7TCx3NJkep1cj1QGTN.N4pJ2oVW6PTuOiLHrNSfC', 'PROJECT_MANAGER', 'ACTIVE', '+1 555-016-3351'),
+(4, 'Alex Rivera', 'alex.dev@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE', '+1 555-018-7742'),
+(5, 'Emma Watson', 'emma.qa@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE', '+1 555-012-6689'),
+(6, 'Liam Chen', 'liam.design@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE', '+1 555-015-8833'),
+(7, 'Sophia Martinez', 'sophia.dev@protrack.com', '$2a$10$5qAKugzgpIHjmYpII7mkzOcjQloAUYdFuXnIMZeBvFmRfB5TF5iKa', 'TEAM_MEMBER', 'ACTIVE', '+1 555-017-4420');
 
 -- Projects
 INSERT INTO `projects` (`project_id`, `title`, `description`, `start_date`, `end_date`, `manager_id`, `status`) VALUES

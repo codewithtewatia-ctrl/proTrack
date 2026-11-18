@@ -510,3 +510,274 @@ function showKanbanToast(message, type) {
     }, 3500);
 }
 
+/* ==========================================================================
+   Self-Service Password Reset via Mail OTP and Contact OTP Controller
+   ========================================================================== */
+
+let otpCountdownInterval = null;
+window.currentOtpCode = '';
+
+// Setup channel card selection toggle
+document.addEventListener('DOMContentLoaded', () => {
+    const cardMail = document.getElementById('cardChannelMail');
+    const cardContact = document.getElementById('cardChannelContact');
+    if (cardMail && cardContact) {
+        cardMail.addEventListener('click', () => {
+            cardMail.classList.add('selected');
+            cardContact.classList.remove('selected');
+            const radio = cardMail.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+        });
+        cardContact.addEventListener('click', () => {
+            cardContact.classList.add('selected');
+            cardMail.classList.remove('selected');
+            const radio = cardContact.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+        });
+    }
+
+    // Reset modal state on close
+    const forgotModalEl = document.getElementById('forgotPasswordModal');
+    if (forgotModalEl) {
+        forgotModalEl.addEventListener('hidden.bs.modal', () => {
+            backToStep1();
+            const alertCont = document.getElementById('forgotAlertContainer');
+            if (alertCont) alertCont.innerHTML = '';
+        });
+    }
+});
+
+function getContextPath() {
+    const meta = document.querySelector('meta[name="context-path"]');
+    if (meta) return meta.getAttribute('content') || '';
+    return '/protrack';
+}
+
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) return meta.getAttribute('content') || '';
+    const input = document.querySelector('input[name="csrfToken"]');
+    if (input) return input.value || '';
+    return '';
+}
+
+function showForgotAlert(message, type = 'danger') {
+    const cont = document.getElementById('forgotAlertContainer');
+    if (!cont) return;
+    const icon = type === 'success' ? 'bi-check-circle-fill' : (type === 'info' ? 'bi-info-circle-fill' : 'bi-exclamation-triangle-fill');
+    cont.innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show py-2 px-3 small d-flex align-items-center mb-3" role="alert">
+            <i class="bi ${icon} me-2 fs-5"></i>
+            <div>${message}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+}
+
+window.handleSendOtp = async function() {
+    const idInput = document.getElementById('forgotIdentifier');
+    const identifier = idInput ? idInput.value.trim() : '';
+
+    if (!identifier) {
+        showForgotAlert('Please enter your account email address or registered contact number.', 'danger');
+        if (idInput) idInput.focus();
+        return;
+    }
+
+    const channelRadio = document.querySelector('input[name="otpChannel"]:checked');
+    const channel = channelRadio ? channelRadio.value : 'MAIL';
+
+    const btn = document.getElementById('btnSendOtp');
+    const spinner = document.getElementById('sendOtpSpinner');
+    const icon = document.getElementById('sendOtpIcon');
+    if (btn) btn.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+    if (icon) icon.classList.add('d-none');
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'sendOtp');
+        formData.append('ajax', 'true');
+        formData.append('identifier', identifier);
+        formData.append('channel', channel);
+        formData.append('csrfToken', getCsrfToken());
+
+        const res = await fetch(getContextPath() + '/forgot-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData.toString()
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || 'Failed to dispatch verification code. Please check your account details.');
+        }
+
+        // Store OTP & update UI
+        window.currentOtpCode = data.otpCode || '';
+        const maskedEl = document.getElementById('otpMaskedTarget');
+        if (maskedEl) maskedEl.innerText = data.maskedTarget || identifier;
+
+        const demoCodeText = document.getElementById('demoOtpCodeText');
+        if (demoCodeText) demoCodeText.innerText = data.otpCode || '------';
+
+        // Switch to Step 2
+        document.getElementById('forgotStep1').classList.add('d-none');
+        document.getElementById('forgotStep2').classList.remove('d-none');
+
+        showForgotAlert(data.message || 'OTP dispatched successfully.', 'success');
+
+        // Start countdown (10 minutes)
+        startOtpTimer(data.expiryMinutes || 10);
+
+        const otpInput = document.getElementById('inputOtpCode');
+        if (otpInput) {
+            otpInput.value = '';
+            setTimeout(() => otpInput.focus(), 200);
+        }
+
+    } catch (err) {
+        showForgotAlert(err.message || 'An error occurred while requesting OTP.', 'danger');
+    } finally {
+        if (btn) btn.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+        if (icon) icon.classList.remove('d-none');
+    }
+};
+
+window.handleVerifyAndReset = async function() {
+    const idInput = document.getElementById('forgotIdentifier');
+    const identifier = idInput ? idInput.value.trim() : '';
+
+    const otpInput = document.getElementById('inputOtpCode');
+    const otpCode = otpInput ? otpInput.value.trim() : '';
+
+    const newPassInput = document.getElementById('inputNewPass');
+    const newPassword = newPassInput ? newPassInput.value : '';
+
+    const confPassInput = document.getElementById('inputConfirmPass');
+    const confirmPassword = confPassInput ? confPassInput.value : '';
+
+    if (!otpCode || otpCode.length < 6) {
+        showForgotAlert('Please enter the complete 6-digit verification OTP code.', 'danger');
+        if (otpInput) otpInput.focus();
+        return;
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+        showForgotAlert('New password must be at least 8 characters long.', 'danger');
+        if (newPassInput) newPassInput.focus();
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showForgotAlert('New passwords do not match. Please verify and re-enter.', 'danger');
+        if (confPassInput) confPassInput.focus();
+        return;
+    }
+
+    const btn = document.getElementById('btnVerifyAndReset');
+    const spinner = document.getElementById('verifySpinner');
+    const icon = document.getElementById('verifyIcon');
+    if (btn) btn.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+    if (icon) icon.classList.add('d-none');
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'verifyAndReset');
+        formData.append('ajax', 'true');
+        formData.append('identifier', identifier);
+        formData.append('otpCode', otpCode);
+        formData.append('newPassword', newPassword);
+        formData.append('confirmPassword', confirmPassword);
+        formData.append('csrfToken', getCsrfToken());
+
+        const res = await fetch(getContextPath() + '/forgot-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData.toString()
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || 'Failed to reset password. Please check your verification code.');
+        }
+
+        // Switch to Step 3 (Success)
+        document.getElementById('forgotStep2').classList.add('d-none');
+        document.getElementById('forgotStep3').classList.remove('d-none');
+        const alertCont = document.getElementById('forgotAlertContainer');
+        if (alertCont) alertCont.innerHTML = '';
+
+        if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+
+    } catch (err) {
+        showForgotAlert(err.message || 'Verification failed. Please check your OTP code.', 'danger');
+    } finally {
+        if (btn) btn.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+        if (icon) icon.classList.remove('d-none');
+    }
+};
+
+window.autoFillDemoOtp = function() {
+    const input = document.getElementById('inputOtpCode');
+    if (input && window.currentOtpCode) {
+        input.value = window.currentOtpCode;
+        input.classList.add('is-valid');
+        setTimeout(() => input.classList.remove('is-valid'), 1500);
+    }
+};
+
+window.backToStep1 = function() {
+    const s1 = document.getElementById('forgotStep1');
+    const s2 = document.getElementById('forgotStep2');
+    const s3 = document.getElementById('forgotStep3');
+    if (s1) s1.classList.remove('d-none');
+    if (s2) s2.classList.add('d-none');
+    if (s3) s3.classList.add('d-none');
+    if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+};
+
+window.togglePassVisibility = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+};
+
+function startOtpTimer(minutes) {
+    if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+    let secondsLeft = minutes * 60;
+    const timerBadge = document.getElementById('otpTimerBadge');
+
+    function update() {
+        if (!timerBadge) return;
+        const mins = Math.floor(secondsLeft / 60);
+        const secs = secondsLeft % 60;
+        timerBadge.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        if (secondsLeft <= 0) {
+            clearInterval(otpCountdownInterval);
+            timerBadge.className = 'badge bg-danger';
+            timerBadge.innerText = 'Expired';
+            showForgotAlert('OTP code has expired. Please request a new code.', 'warning');
+        }
+        secondsLeft--;
+    }
+
+    update();
+    otpCountdownInterval = setInterval(update, 1000);
+}
+
+

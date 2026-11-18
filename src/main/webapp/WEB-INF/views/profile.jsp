@@ -97,6 +97,16 @@
                                 <input type="email" class="form-control" id="profEmail" name="email"
                                        value="<%= profileUser != null ? ValidationUtil.escapeXml(profileUser.getEmail()) : "" %>" required>
                             </div>
+                            <div class="mb-3">
+                                <label for="profContact" class="form-label">Contact / Mobile Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-telephone"></i></span>
+                                    <input type="tel" class="form-control" id="profContact" name="contactNumber"
+                                           value="<%= profileUser != null && profileUser.getContactNumber() != null ? ValidationUtil.escapeXml(profileUser.getContactNumber()) : "" %>"
+                                           placeholder="+1 (555) 000-0000">
+                                </div>
+                                <div class="form-text small text-muted">Used for Contact OTP identity verification and account recovery.</div>
+                            </div>
                             <div class="d-flex justify-content-end">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-save me-1"></i> Update Details
@@ -132,7 +142,10 @@
                                 <label for="confPass" class="form-label">Confirm New Password</label>
                                 <input type="password" class="form-control" id="confPass" name="confirmPassword" minlength="8" required>
                             </div>
-                            <div class="d-flex justify-content-end">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                                    <i class="bi bi-question-circle me-1"></i> Forgot Password?
+                                </button>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-key me-1"></i> Update Password
                                 </button>
@@ -376,5 +389,8 @@
         }
     }
 </script>
+
+<!-- Forgot Password OTP Reset Modal -->
+<jsp:include page="common/forgot-password-modal.jsp" />
 
 <jsp:include page="common/footer.jsp" />

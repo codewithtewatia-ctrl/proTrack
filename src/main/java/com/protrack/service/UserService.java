@@ -135,6 +135,10 @@ public class UserService {
     }
 
     public void updateProfile(int userId, String fullName, String email) throws AppException {
+        updateProfile(userId, fullName, email, null);
+    }
+
+    public void updateProfile(int userId, String fullName, String email, String contactNumber) throws AppException {
         User existing = getUserById(userId);
 
         if (!ValidationUtil.isNotEmpty(fullName)) {
@@ -153,6 +157,9 @@ public class UserService {
 
         existing.setFullName(trimmedName);
         existing.setEmail(email.trim().toLowerCase());
+        if (contactNumber != null) {
+            existing.setContactNumber(contactNumber.trim());
+        }
 
         boolean updated = userDAO.update(existing);
         if (!updated) {
